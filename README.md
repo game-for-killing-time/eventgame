@@ -2,6 +2,8 @@
 
 繁體中文 Twitch 觀眾同樂網站：選邊站、猜最多人的答案、分享故事。純 HTML / CSS / JavaScript，Firebase Authentication + Realtime Database，GitHub Pages 靜態部署；沒有 PHP、Cloud Functions、Twitch API 或付費服務。
 
+正式網址與 Firebase 更新步驟：[手機連線試玩](docs/ONLINE-TRIAL.md)。
+
 ## 快速試玩
 
 需要 Node.js 22（建議）及 npm。
@@ -61,4 +63,5 @@ npm.cmd run test:rules
 在 Firebase Console 的 Realtime Database → Usage 檢查連線、儲存和下載；Authentication → Usage（介面依專案設定略有不同）查看使用量。Spark 額度不足可能拒絕服務，並非無限免費。本網站不會升級方案，也沒有自動刪除資料；每場由主持人清理。
 
 視覺與玩法設計：[海島派對設計說明](docs/DESIGN.md)。本場角色容許重複，重整保留；角色不影響分數。
+
 

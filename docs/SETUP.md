@@ -1,6 +1,6 @@
 # Firebase 與 GitHub Pages 設定
 
-專案已填入你提供的 Firebase 網頁設定。可用 ?demo=1 明確進入本機模擬；本機網址不能分享給不同網路的觀眾，GitHub Pages 的正式部署仍需完成。
+專案已填入你提供的 Firebase 網頁設定。可用 ?demo=1 明確進入本機模擬；本機網址不能分享給不同網路的觀眾，GitHub Pages 已首次部署，網址與 Firebase 更新步驟見 [手機連線試玩](ONLINE-TRIAL.md)。
 
 ## 1. 建立 Firebase（帳號持有人操作）
 
@@ -88,5 +88,6 @@ Authentication → Settings → Authorized domains 加上 `game-for-killing-time
 4. 玩家更新頁面後可使用手機分頁與散步區；OBS 仍使用原 `display.html`。
 
 本機已準備新版規則與網站；不代表雲端已發布。指定主持人方式仍是 `/config/hostUid`，其餘人不可讀寫 `/room/hostOnly`。
+
 
 
