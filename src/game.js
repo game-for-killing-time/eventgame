@@ -12,7 +12,7 @@ export function leaderboard(results={},members={}) {
  for(const result of Object.values(results)) for(const [id,score] of Object.entries(result.points||{})) scores[id]=(scores[id]||0)+score;
  return Object.entries(members).map(([id,m])=>({id,name:m.name,score:scores[id]||0})).sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name,'zh-Hant'));
 }
-export function newRoom(code) {return {public:{state:{code,status:'waiting',round:0,locked:false,chatOpen:true,deadline:0},members:{}},answers:{},stories:{},moderation:{},chat:{}};}
+export function newRoom(code) {return {public:{state:{code,status:'waiting',round:0,locked:false,chatOpen:true,chatEffects:true,submitEffects:true,deadline:0},members:{}},answers:{},stories:{},moderation:{},chat:{}};}
 export function startRound(room,question,now,duration=45) {
  if(!room||!['waiting','revealed'].includes(room.public.state.status)) throw Error('請先揭曉目前題目。');
  const s=room.public.state; return {...s,round:s.round+1,status:'open',question,deadline:now+duration*1000};

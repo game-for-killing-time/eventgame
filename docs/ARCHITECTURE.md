@@ -16,7 +16,7 @@
 | `/room/stories/{round}/{uid}` | 私人投稿 | 本人與主持人 | 揭曉後本人，禁言／移除者不可投稿 |
 | `/room/public/story` | 選中的暱稱、故事、輪次 | 所有人 | 主持人 |
 
-沒有在 `/room` 給一般觀眾讀取權；Realtime Database 規則不是過濾器。展示頁只掛 `/room/public` 監聽，不讀聊天室、答案、私人故事或管理資料。三頁分別使用 Firebase app 名稱，展示頁只用記憶體中的未登入身分，不沿用主持人登入。
+沒有在 `/room` 給一般觀眾讀取權；Realtime Database 規則不是過濾器。展示頁監聽 `/room/public`，並在主持開啟時讀取 `/room/effects/chat` 與 `/room/effects/submissions`；不讀私人聊天室歷史、答案、私人故事或管理資料。三頁分別使用 Firebase app 名稱，展示頁只用記憶體中的未登入身分，不沿用主持人登入。
 
 ## 身分及容量
 
@@ -55,3 +55,9 @@ Firebase SDK 可能先送出本機事件；「已提交」只在寫入 Promise �
 - [JavaScript 離線行為](https://firebase.google.com/docs/database/web/offline-capabilities)
 - [匿名驗證](https://firebase.google.com/docs/auth/web/anonymous-auth)
 - [Emulator 連接與測試](https://firebase.google.com/docs/emulator-suite/connect_rtdb)
+
+## 自動彈幕（2026-10-14）
+
+`/room/effects/chat/{uid}` 只有每人最新一則的 seq、text、at；`/room/effects/submissions` 只有輪次與各 UID 的交卷時間。主持使用房間交易從已儲存資料建立副本，不包含答案、預測或私人默契。觀眾不可寫入；未登入展示頁只在相應開關開啟且房間未結束時可讀子節點，不能讀 effects 父節點或私人資料。
+
+單次交易可能讀取整個房間，長場次累積的聊天與答案會增加流量；活動結束後清理房間。動畫只在本機執行，不逐幀寫入。轉送依賴主持頁持續運作，沒有 Cloud Functions。展示副本最多每人一則聊天／一份交卷提示；不是自動刪除聊天室歷史或資料保留期限。

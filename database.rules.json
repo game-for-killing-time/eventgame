@@ -125,6 +125,16 @@
       "hostOnly": {
         ".read": "auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous'",
         ".write": "auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous'"
+      },
+      "effects": {
+        "chat": {
+          ".read": "root.child('room/public/state').child('chatEffects').val() === true && root.child('room/public/state').child('chatOpen').val() === true === true && root.child('room/public/state').child('status').val() !== 'ended'",
+          ".write": "auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous'"
+        },
+        "submissions": {
+          ".read": "root.child('room/public/state').child('submitEffects').val() === true && root.child('room/public/state').child('status').val() !== 'ended'",
+          ".write": "auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous'"
+        }
       }
     }
   }

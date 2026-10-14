@@ -19,5 +19,9 @@ rules.rules.room.public.seats={'$seat':{'.write':"auth != null && !data.exists()
 function trustedValidation(node) {for(const [key,value] of Object.entries(node)) {if(typeof value==='string'&&key.startsWith('.'))node[key]=value.replace(/!((?:root|data|newData)(?:\.child\([^)]*\))+\.val\(\))/g,'$1 !== true').replace(/(root\.child\('room\/public\/state'\)\.child\('chatOpen'\)\.val\(\))/g,'$1 === true');if(key==='.validate') node[key]=`(${host}) || (${node[key]})`; else if(value && typeof value==='object') trustedValidation(value);}}
 rules.rules.room.hostOnly={'.read':host,'.write':host};
 rules.rules.room.public.island={'.write':host};
+rules.rules.room.effects={
+ chat:{'.read':`${state}.child('chatEffects').val() === true && ${state}.child('chatOpen').val() === true && ${state}.child('status').val() !== 'ended'`,'.write':host},
+ submissions:{'.read':`${state}.child('submitEffects').val() === true && ${state}.child('status').val() !== 'ended'`,'.write':host}
+};
 trustedValidation(rules.rules);
 writeFileSync('database.rules.json',JSON.stringify(rules,null,2)+'\n');

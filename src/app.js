@@ -1,3 +1,4 @@
+import {createEffects} from './effects-view.js';
 import {createInvite} from './invite.js';
 import {createIsland} from './island-view.js';
 import {pairStats,qualifies} from './affinity.js';
@@ -30,6 +31,9 @@ ${role==='host'?'<section id="affinityPanel" class="panel" hidden><h2>島民默�
 </main><footer><span>選擇沒有標準答案，也不是人格測驗。</span><a id="twitch" target="_blank" rel="noopener">回到 Twitch ↗</a></footer>`;
 const updateIsland=role==='viewer'?createIsland($('islandArea')):()=>{};
 const updateInvite=role==='host'?createInvite($('inviteTools')):()=>{};
+let updateEffects=()=>{}; const relayed=new Set();
+function relayOnce(key,value){if(relayed.has(key))return;relayed.add(key);if(relayed.size>500)relayed.delete(relayed.values().next().value);api.command('relayEffects',value).catch(()=>relayed.delete(key));}
+if(role==='host'){const panel=document.createElement('div');panel.className='effect-controls';panel.innerHTML='<h2>直播氣氛</h2><p class=hint>聊天會自動出現在玩家頁與直播。保留此主持頁開著，即可自動轉送。</p><div class=toolbar>'+button('toggleChatEffects','聊天彈幕')+button('toggleSubmitEffects','交卷彈幕')+'</div>';$('controls').insertBefore(panel,document.querySelector('.room-management'));}
 function setPane(value){pane=value;document.body.dataset.pane=value;if(value==='chat')unread=0;updateBadges();document.querySelectorAll('[data-pane]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.pane===value)));}
 function updateBadges(){if($('chatBadge'))$('chatBadge').textContent=unread?`(${unread})`:'';if($('chatEntryCount'))$('chatEntryCount').textContent=unread?`${unread} 則新訊息`:'打開聊天室';}
 document.querySelectorAll('[data-pane]').forEach(b=>b.onclick=()=>setPane(b.dataset.pane));if($('chatEntry'))$('chatEntry').onclick=()=>setPane('chat');setPane('answer');
@@ -64,10 +68,11 @@ function entry(){
 function eligible(){return role==='viewer'&&pub?.members?.[api.uid()]&&savedCode===pub?.state?.code&&!moderation.removed;}
 function render(){
  const s=pub?.state,joined=eligible();entry();
+ updateEffects(pub,role==='display'||joined);
  if(role==='host')updateInvite({url:s?new URL(link('index',s.code),location.href).href:'',available:hostReady&&!!s&&s.status!=='ended',demo:explicitDemo||!config.firebase,local:['localhost','127.0.0.1'].includes(location.hostname),locked:s?.locked});
  if(role==='host'&&!s){const m=document.querySelector('.room-management');m.open=false;m.dataset.roomState='';m.querySelector('summary').textContent='房間管理與登出';}
  if(role==='viewer'){for(const id of ['viewerStatus','playerTabs','chatEntry','islandArea'])$(id).hidden=!joined;document.body.classList.toggle('in-room',!!joined);if(joined){$('viewerStatus').innerHTML=`<span>房間 <b>${esc(s.code)}</b> · ${Object.keys(pub.members||{}).length} 人已入座</span><span class="viewer-identity">${characterMarkup(characterId(api.uid(),s.code))}<b>${esc(pub.members[api.uid()].name)}</b><small>P${String(Number(pub.members[api.uid()].seat??0)+1).padStart(2,'0')}</small></span>`;updateIsland(pub,api.uid());}}
- if(!s){if($('affinityPanel')){$('affinityPanel').hidden=true;$('affinityRows').textContent='';}replace('game','<div class="empty"><span class="big-mark">◒</span><h1>小桌還沒開場</h1><p>主持人開好房間後，就可以一起入座。</p></div>');if($('social'))$('social').hidden=true;if(hostReady){for(const id of ['lock','toggleChat','end','clean','start','extend','close','reveal'])$(id).disabled=true;$('submitted').textContent='等待開場';$('roomLinks').innerHTML='<b>還沒有房間</b><span>建立房間後，邀請朋友入座。</span>';$('hostGuide').textContent='先建立房間，再選一道暖場題。';$('members').textContent='';$('stories').textContent='';}return;}
+ if(!s){if($('affinityPanel')){$('affinityPanel').hidden=true;$('affinityRows').textContent='';}replace('game','<div class="empty"><span class="big-mark">◒</span><h1>小桌還沒開場</h1><p>主持人開好房間後，就可以一起入座。</p></div>');if($('social'))$('social').hidden=true;if(hostReady){for(const id of ['lock','toggleChat','toggleChatEffects','toggleSubmitEffects','end','clean','start','extend','close','reveal'])$(id).disabled=true;$('submitted').textContent='等待開場';$('roomLinks').innerHTML='<b>還沒有房間</b><span>建立房間後，邀請朋友入座。</span>';$('hostGuide').textContent='先建立房間，再選一道暖場題。';$('members').textContent='';$('stories').textContent='';}return;}
  const result=pub.results?.[s.round], isOpen=s.status==='open'&&api.now()<s.deadline, count=Object.keys(pub.members||{}).length;
  const canAnswer=joined&&isOpen;
  const board=leaderboard(pub.results,pub.members);
@@ -86,7 +91,7 @@ function render(){
  document.querySelectorAll('input[name="choice"]').forEach(el=>el.onchange=()=>{choice=+el.value;ack='選擇已修改，請提交。';render();});
  document.querySelectorAll('input[name="prediction"]').forEach(el=>el.onchange=()=>{prediction=+el.value;ack='選擇已修改，請提交。';render();});
  on('submit',async()=>{if(sending)return;sending=true;ack='';render();const stillCurrent=()=>pub?.state?.code===s.code&&pub?.state?.round===s.round;try{await api.answer(s.round,choice,prediction);if(stillCurrent()){ack='已提交';notice(api.mode.startsWith('本機')?'本機模擬：答案已儲存。':'伺服器已確認答案。');}}catch(e){if(stillCurrent())ack='提交未成功，請檢查連線或截止時間。';throw e;}finally{sending=false;render();}});
- if($('social')){$('social').hidden=!(joined||hostReady);$('storyBox').hidden=!(joined&&s.status==='revealed');$('chatHint').textContent=s.chatOpen?'作答時先別暴雷！每人隔 3 秒可發言一次。':'主持人暫時關閉了聊天。';$('chatText').disabled=!joined||!s.chatOpen||moderation.muted||s.status==='ended';$('chatForm').hidden=role==='host';}
+ if($('social')){$('social').hidden=!(joined||hostReady);$('storyBox').hidden=!(joined&&s.status==='revealed');$('chatHint').textContent=s.chatOpen?'聊天會自動出現在玩家頁與直播彈幕；請勿填個人資料，作答時先別暴雷。每人隔 3 秒可發言一次。':'主持人暫時關閉了聊天。';$('chatText').disabled=!joined||!s.chatOpen||moderation.muted||s.status==='ended';$('chatForm').hidden=role==='host';}
  if(role==='host'&&hostReady){renderHost();ensureMigration();}
  tick();
 }
@@ -96,12 +101,14 @@ function watchOwn(){ownUnsub();modUnsub();if(role!=='viewer'||!api.uid())return;
 function renderHost(){
  if(!pub?.state)return;const s=pub.state;
  renderAffinity();
+ for(const [id,field,label] of [['toggleChatEffects','chatEffects','聊天彈幕'],['toggleSubmitEffects','submitEffects','交卷彈幕']]){$(id).disabled=s.status==='ended';$(id).textContent=label+'：'+(s[field]===true?'開啟中':'已關閉');$(id).setAttribute('aria-pressed',String(s[field]===true));}
+ if(s.submitEffects===true)relayOnce(s.code+'/answers/'+s.round+'/'+JSON.stringify(privateRoom.answers?.[s.round]||{}),{code:s.code,round:s.round,kind:'submissions'});
  $('submitted').textContent=`${Object.keys(privateRoom.answers?.[s.round]||{}).length} / ${Object.keys(pub.members||{}).length} 人已提交`;
  $('hostGuide').textContent={waiting:'朋友入座後，選一道暖場題開始。',open:'作答進行中，可延長或提前截止，不必等所有人。',closed:'作答已鎖定，準備好就揭曉大家的選擇。',revealed:'留點時間聽故事，再選下一題。',ended:'活動已結束；需要保留資料請先匯出，再清理。'}[s.status]||'';
  $('lock').textContent=s.locked?'重新開放加入':'鎖定加入';$('toggleChat').textContent=s.chatOpen?'關閉聊天':'開啟聊天';
  $('create').disabled=true;for(const id of ['lock','toggleChat','end'])$(id).disabled=s.status==='ended';$('clean').disabled=s.status!=='ended';$('start').disabled=!['waiting','revealed'].includes(s.status);$('reveal').disabled=!['closed','revealed'].includes(s.status);$('close').disabled=s.status!=='open';$('extend').disabled=s.status!=='open'||api.now()>=s.deadline;
  const ended=s.status==='ended';
- $('roomLinks').innerHTML=`<span class="host-code-label">${ended?'本場已結束 · 不再接受加入':s.locked?'已暫停接受新朋友':'邀請朋友入座'}</span><b class="host-room-code">${esc(s.code)}</b>${ended?'<p class="hint">這是保留的上一場紀錄。確認不需保留後，清理資料即可建立新房間。</p>':''}<span class="host-links">${!ended?`<a href="${esc(link('index',s.code))}" target="_blank" rel="noopener">開啟觀眾網址 ↗</a>`:''}<a href="${link('display')}" target="_blank" rel="noopener">開啟 OBS 展示 ↗</a></span>`;
+ $('roomLinks').innerHTML=`<span class="host-code-label">${ended?'本場已結束 · 不再接受加入':s.locked?'已暫停接受新朋友':'邀請朋友入座'}</span><b class="host-room-code">${esc(s.code)}</b>${ended?'<p class="hint">這是保留的上一場紀錄。確認不需保留後，清理資料即可建立新房間。</p>':''}<span class="host-links">${!ended?`<a href="${esc(link('index',s.code))}" target="_blank" rel="noopener">我要一起玩 ↗</a>`:''}<a href="${link('display')}" target="_blank" rel="noopener">開啟 OBS 展示 ↗</a></span>`;
  const management=document.querySelector('.room-management');
  if(management.dataset.roomState!==`${s.code}/${s.status}`){management.open=ended;management.dataset.roomState=`${s.code}/${s.status}`;}
  management.querySelector('summary').textContent=ended?'本場已結束：清理資料後開新場':'房間管理與登出';
@@ -122,6 +129,7 @@ function syncChats(){
  renderChat();
 }
 function renderChat(){if(!$('messages'))return;const msgs=Object.entries(chatData).flatMap(([uid,m])=>Object.entries(m).map(([id,v])=>({...v,uid,id}))).sort((a,b)=>a.at-b.at).slice(-50);
+ if(hostReady&&pub?.state?.chatEffects===true&&pub.state.chatOpen)for(const m of msgs)relayOnce(pub.state.code+'/chat/'+m.uid+'/'+m.id,{code:pub.state.code,kind:'chat',uid:m.uid,seq:m.id});
  const keys=msgs.map(m=>`${m.uid}/${m.id}`);if(chatInitialized&&pane!=='chat')unread+=msgs.filter(m=>m.uid!==api.uid()&&!seenMessages.has(`${m.uid}/${m.id}`)).length;keys.forEach(k=>seenMessages.add(k));chatInitialized=true;if(pane==='chat')unread=0;updateBadges();
  $('messages').innerHTML=msgs.map(m=>`<div class="message">${characterMarkup(characterId(m.uid,pub?.state?.code))}<b>${esc(pub?.members?.[m.uid]?.name||'朋友')}</b><p>${esc(m.text)}</p>${hostReady?`<button data-delete="${esc(m.uid)}" data-id="${esc(m.id)}" aria-label="刪除訊息">刪除</button>`:''}</div>`).join('')||'<p class="hint">還沒有人說話。安靜作答也很好。</p>';
  document.querySelectorAll('[data-delete]').forEach(b=>b.onclick=()=>act(()=>api.command('deleteMessage',{uid:b.dataset.delete,id:b.dataset.id})));
@@ -130,8 +138,10 @@ try{
  api=await connect(role,s=>{$('connection').textContent=s;if(s==='已連線'&&api)ensureMigration();});
  const isDemo=api.mode.startsWith('本機');$('mode').hidden=!isDemo;
  $('mode').textContent=isDemo?'試玩示範 · 只在這個瀏覽器同步，不是多人連線。主持頁建立 PARTY1 即可試玩。':'';
+ if(role==='viewer'||role==='display'){const e=document.createElement('section');e.id='partyEffects';e.hidden=true;(role==='viewer'?$('islandArea'):document.querySelector('header')).append(e);updateEffects=createEffects(api,role,e);}
+ on('toggleChatEffects',()=>api.command('chatEffects',pub?.state?.chatEffects!==true));on('toggleSubmitEffects',()=>api.command('submitEffects',pub?.state?.submitEffects!==true));
  if(role==='host'){hostReady=await api.checkHost().catch(e=>{notice(friendly(e),true);return false;});watchPrivate();}
- api.watch('room/public',p=>{const previous=pub?.state;pub=p;const changed=p?.state?.round!==previous?.round||p?.state?.code!==previous?.code;if(p?.state?.code!==previous?.code){unread=0;chatInitialized=false;seenMessages.clear();migrationCode=null;}if(changed){choice=null;prediction=null;ack='';answerRound=p?.state?.round;}render();if(!p&&$('create'))$('create').disabled=false;if(hostReady&&(privateRound!==p?.state?.round||changed))watchPrivate();if(changed||(!previous&&p))watchOwn();syncChats();},e=>notice(friendly(e),true));
+ api.watch('room/public',p=>{const previous=pub?.state;pub=p;const changed=p?.state?.round!==previous?.round||p?.state?.code!==previous?.code;if(p?.state?.code!==previous?.code){unread=0;chatInitialized=false;seenMessages.clear();migrationCode=null;relayed.clear();}if(changed){choice=null;prediction=null;ack='';answerRound=p?.state?.round;}render();if(!p&&$('create'))$('create').disabled=false;if(hostReady&&(privateRound!==p?.state?.round||changed))watchPrivate();if(changed||(!previous&&p))watchOwn();syncChats();},e=>notice(friendly(e),true));
  on('create',()=>api.create());on('lock',()=>api.command('lock',!pub.state.locked));on('toggleChat',()=>api.command('chatOpen',!pub.state.chatOpen));on('end',()=>api.command('end'));on('clean',async()=>{if(confirm('永久清理這個已結束房間的答案、聊天、故事和分數？'))await api.command('clean');});
  on('start',()=>api.command('start',questions[+$('questionPick').value]));for(const action of ['extend','close','reveal'])on(action,()=>api.command(action));
  on('logout',async()=>{await api.logout();location.reload();});
@@ -139,6 +149,3 @@ try{
  if($('storyForm'))$('storyForm').onsubmit=e=>{e.preventDefault();act(async()=>{const text=$('storyText').value.trim();if(!text)return;await api.story(pub.state.round,text);notice('故事已交給主持人，尚未公開。');});};
  setInterval(tick,250);
 }catch(e){notice(`無法啟動：${friendly(e)}`,true);}
-
-
-

@@ -45,3 +45,17 @@ test('migration excludes open/closed current answers and can resume without doub
  settleRoom(r,3,'OLD123');assert.deepEqual(pairStats(r.hostOnly.affinity.pairs,'a','b'),{shared:3,same:2});const once=structuredClone(r);settleRoom(r,3,'OLD123');assert.deepEqual(r,once);
  const replaced={a:r.public.members.a,newcomer:{name:'new',seat:'1'}};const next=islandLayout(replaced,r.hostOnly.affinity.pairs,3);assert.equal(next.positions.newcomer.x-next.positions.a.x,196);
 });
+
+import {relayEffects} from '../src/effects.js';
+test('effects publish only recent sanitized presentation data and are idempotent',()=>{
+ const r=newRoom('PARTY1');r.public.members={a:{name:'A'}};r.public.state=startRound(r,questions[0],10000);r.answers={1:{a:{choice:2,prediction:3,at:10000}}};
+ assert.ok(relayEffects(r,{code:'PARTY1',kind:'submissions',round:1},10001));assert.deepEqual(r.effects.submissions,{round:1,items:{a:10000}});
+ r.answers[1].a.at=11000;assert.equal(relayEffects(r,{code:'PARTY1',kind:'submissions',round:1},11001),undefined);
+ r.chat={a:{messages:{1:{text:'hello',at:10000}}}};assert.ok(relayEffects(r,{code:'PARTY1',kind:'chat',uid:'a',seq:1},11000));assert.deepEqual(r.effects.chat.a,{seq:1,text:'hello',at:10000});
+ assert.equal(relayEffects(r,{code:'OTHER1',kind:'chat',uid:'a',seq:1},11000),undefined);
+ assert.equal(relayEffects(r,{code:'PARTY1',kind:'chat',uid:'a',seq:1},11000),undefined);
+ r.chat.a.messages[2]={text:'old',at:1};assert.equal(relayEffects(r,{code:'PARTY1',kind:'chat',uid:'a',seq:2},40000),undefined);
+ r.chat.a.messages[2]={text:'muted',at:11000};r.moderation.a={muted:true};assert.equal(relayEffects(r,{code:'PARTY1',kind:'chat',uid:'a',seq:2},11001),undefined);
+ r.moderation={};r.public.state.chatEffects=false;assert.equal(relayEffects(r,{code:'PARTY1',kind:'chat',uid:'a',seq:2},11001),undefined);
+ r.public.state.status='ended';assert.equal(relayEffects(r,{code:'PARTY1',kind:'submissions',round:1},11001),undefined);
+});

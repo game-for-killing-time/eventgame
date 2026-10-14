@@ -118,3 +118,15 @@ test('10 clients see only revealed island positions; private affinity denied, re
  await update(ref(h,'room'),{'public/members/islander0':null,'public/seats/0':null,'public/island/positions/islander0':null,'moderation/islander0/removed':true});
  assert.equal((await get(ref(clients[1].db,'room/public/island/positions/islander0'))).exists(),false);
 });
+
+test('public effects are host-only writes, switch-gated reads, no private answer access',async()=>{
+ await member('a');const h=host(),a=db('a'),display=env.unauthenticatedContext().database();
+ await submit(a,'a',2,3);await chat(a,'a','hello');
+ await assertFails(set(ref(a,'room/effects/chat/a'),{seq:1,text:'fake',at:Date.now()}));
+ await assertFails(set(ref(a,'room/public/state/chatEffects'),false));
+ await assertSucceeds(set(ref(h,'room/effects'),{chat:{a:{seq:1,text:'hello',at:Date.now()}},submissions:{round:1,items:{a:Date.now()}}}));
+ for(const client of [a,display]){assert.equal((await assertSucceeds(get(ref(client,'room/effects/chat/a/text')))).val(),'hello');await assertSucceeds(get(ref(client,'room/effects/submissions')));await assertFails(get(ref(client,'room/answers/1')));await assertFails(get(ref(client,'room/hostOnly')));await assertFails(get(ref(client,'room/effects')));}
+ await set(ref(h,'room/public/state/chatEffects'),false);await assertFails(get(ref(display,'room/effects/chat')));await assertSucceeds(get(ref(display,'room/effects/submissions')));
+ await set(ref(h,'room/public/state/submitEffects'),false);await assertFails(get(ref(display,'room/effects/submissions')));
+ await update(ref(h,'room/public/state'),{chatEffects:true,submitEffects:true,status:'ended'});await assertFails(get(ref(display,'room/effects/chat')));await assertFails(get(ref(display,'room/effects/submissions')));
+});

@@ -1,4 +1,5 @@
 import {migrateAffinity} from './affinity.js';
+import {relayEffects} from './effects.js';
 import {config} from '../config.js';
 import {newRoom,startRound,settleRoom} from './game.js';
 
@@ -27,6 +28,8 @@ export async function connect(role,onConnection) {
  async chat(text){ready();const uid=api.uid(), seq=(await get(`room/chat/${uid}/seq`)||0)+1;await d.update(ref(`room/chat/${uid}`),{seq,lastSent:d.serverTimestamp(),[`messages/${seq}`]:{text,at:d.serverTimestamp()}});},
  async story(round,text){ready();await d.set(ref(`room/stories/${round}/${api.uid()}`),{text,at:d.serverTimestamp()});},
  async command(action,value){ready();
+ if(action==='relayEffects'){await d.runTransaction(ref('room'),r=>r?relayEffects(r,value,api.now()):null,{applyLocally:false});return;}
+ if(action==='chatEffects'||action==='submitEffects'){await d.update(ref('room'),{[`public/state/${action}`]:value,[`effects/${action==='chatEffects'?'chat':'submissions'}`]:null});return;}
  if(action==='clean'){const r=await d.runTransaction(ref('room'),room=>!room||room.public.state.status==='ended'?null:undefined,{applyLocally:false});if(!r.committed) throw Error('請先結束房間。');return;}
  if(action==='migrate'){const expected=await get('room/public/state');if(!expected)return;await d.runTransaction(ref('room'),r=>!r?null:r.public.state.code===expected.code?migrateAffinity(r):undefined,{applyLocally:false});return;}
  if(action==='reveal'){const expected=await get('room/public/state');const r=await d.runTransaction(ref('room'),room=>room?settleRoom(room,expected.round,expected.code):null,{applyLocally:false});if(!r.committed)throw Error('這輪狀態已改變，請重新確認。');return;}
@@ -34,9 +37,9 @@ export async function connect(role,onConnection) {
  if(action==='close'||action==='extend'){const expected=value||await get('room/public/state');await d.runTransaction(ref('room/public/state'),s=>{if(!s)return null;if(s.code!==expected.code||s.round!==expected.round||s.status!=='open'||(action==='extend'&&s.deadline<=api.now())) return;return {...s,...(action==='close'?{status:'closed'}:{deadline:s.deadline+15000})};},{applyLocally:false});return;}
  if(action==='end'){await d.update(ref('room/public/state'),{status:'ended',locked:true,chatOpen:false});return;}
  if(action==='lock'||action==='chatOpen'){await d.set(ref(`room/public/state/${action==='lock'?'locked':'chatOpen'}`),value);return;}
- if(action==='mute'){await d.set(ref(`room/moderation/${value.uid}/muted`),value.muted);return;}
- if(action==='remove'){const m=await get(`room/public/members/${value}`);await d.update(ref('room'),{[`moderation/${value}/removed`]:true,[`public/members/${value}`]:null,[`public/island/positions/${value}`]:null,...(m?.seat!==undefined?{[`public/seats/${m.seat}`]:null}:{})});return;}
- if(action==='deleteMessage'){await d.remove(ref(`room/chat/${value.uid}/messages/${value.id}`));return;}
+ if(action==='mute'){await d.update(ref('room'),{[`moderation/${value.uid}/muted`]:value.muted,...(value.muted?{[`effects/chat/${value.uid}`]:null}:{})});return;}
+ if(action==='remove'){const m=await get(`room/public/members/${value}`);await d.update(ref('room'),{[`moderation/${value}/removed`]:true,[`public/members/${value}`]:null,[`public/island/positions/${value}`]:null,[`effects/chat/${value}`]:null,[`effects/submissions/items/${value}`]:null,...(m?.seat!==undefined?{[`public/seats/${m.seat}`]:null}:{})});return;}
+ if(action==='deleteMessage'){await d.runTransaction(ref('room'),r=>{if(!r)return null;if(r.chat?.[value.uid]?.messages)delete r.chat[value.uid].messages[value.id];if(String(r.effects?.chat?.[value.uid]?.seq)===String(value.id))delete r.effects.chat[value.uid];return r;},{applyLocally:false});return;}
  if(action==='selectStory'){await d.set(ref('room/public/story'),value);return;}
  }
  };
@@ -62,6 +65,8 @@ function demo(role,onConnection){
  async chat(text){const r=read();if(!r?.public.members?.[uid]||r.moderation?.[uid]?.muted||!r.public.state.chatOpen)throw Error('目前無法發言。');r.chat??={};const c=r.chat[uid]??={seq:0,messages:{},lastSent:0};if(Date.now()-c.lastSent<3000||text.length>240)throw Error('請隔三秒再發言，最多 240 字。');c.messages[++c.seq]={text,at:Date.now()};c.lastSent=Date.now();save(r);},
  async story(round,text){const r=read();if(!r?.public.members?.[uid]||r.moderation?.[uid]?.muted||r.public.state.status!=='revealed'||text.length>500)throw Error('現在不能投稿。');r.stories??={};r.stories[round]??={};r.stories[round][uid]={text,at:Date.now()};save(r);},
  async command(action,value){let r=read();if(!r)throw Error('請先建立房間。');const s=r.public.state;
+ if(action==='relayEffects'){const next=relayEffects(r,value,Date.now());if(next)save(next);return;}
+ if(action==='chatEffects'||action==='submitEffects'){s[action]=value;if(r.effects)delete r.effects[action==='chatEffects'?'chat':'submissions'];}
  if(action==='start'){r.public.state=startRound(r,value,Date.now());delete r.public.story;}
  if(action==='close'&&s.status==='open')s.status='closed';
  if(action==='extend'&&s.status==='open'&&s.deadline>Date.now())s.deadline+=15000;
@@ -71,9 +76,9 @@ function demo(role,onConnection){
  if(action==='clean'){if(s.status!=='ended')throw Error('請先結束房間。');r=null;}
  if(action==='lock')s.locked=value;
  if(action==='chatOpen')s.chatOpen=value;
- if(action==='mute'){r.moderation??={};r.moderation[value.uid]??={};r.moderation[value.uid].muted=value.muted;}
- if(action==='remove'){r.moderation??={};r.moderation[value]={removed:true};delete r.public.members[value];if(r.public.island?.positions)delete r.public.island.positions[value];}
- if(action==='deleteMessage')delete r.chat[value.uid].messages[value.id];
+ if(action==='mute'){r.moderation??={};r.moderation[value.uid]??={};r.moderation[value.uid].muted=value.muted;if(value.muted&&r.effects?.chat)delete r.effects.chat[value.uid];}
+ if(action==='remove'){r.moderation??={};r.moderation[value]={removed:true};delete r.public.members[value];if(r.effects?.chat)delete r.effects.chat[value];if(r.effects?.submissions?.items)delete r.effects.submissions.items[value];if(r.public.island?.positions)delete r.public.island.positions[value];}
+ if(action==='deleteMessage'){delete r.chat[value.uid].messages[value.id];if(String(r.effects?.chat?.[value.uid]?.seq)===String(value.id))delete r.effects.chat[value.uid];}
  if(action==='selectStory')r.public.story=value;
  save(r);
  }};return api;
