@@ -33,7 +33,14 @@ function updateBadges(){if($('chatBadge'))$('chatBadge').textContent=unread?`(${
 document.querySelectorAll('[data-pane]').forEach(b=>b.onclick=()=>setPane(b.dataset.pane));if($('chatEntry'))$('chatEntry').onclick=()=>setPane('chat');setPane('answer');
 async function ensureMigration(){if(!hostReady||!pub?.state||migrating||migrationCode===pub.state.code)return;migrating=true;const code=pub.state.code;try{await api.command('migrate');migrationCode=code;}catch(e){notice(friendly(e),true);}finally{migrating=false;}}
 try{const u=new URL(config.twitchUrl);$('twitch').href=u.protocol==='https:'?u.href:'https://www.twitch.tv/';}catch{$('twitch').href='https://www.twitch.tv/';}
-function notice(msg,error=false){$('notice').textContent=msg;$('notice').className=error?'error':'success';}
+function notice(msg,error=false){
+ const box=$('notice');box.replaceChildren();box.className=error?'error':'success';
+ if(!msg)return;
+ const text=document.createElement('span');text.textContent=msg;
+ const close=document.createElement('button');close.type='button';close.className='notice-close';close.textContent='×';close.setAttribute('aria-label','關閉提示');
+ close.onclick=()=>{box.replaceChildren();box.className='';};
+ box.append(text,close);
+}
 function friendly(e){return e.code?.includes('permission')?'操作未獲伺服器接受。可能已截止、被禁言／移除，或房間已鎖定。':e.code?.includes('auth/')?'登入失敗，請檢查帳號、密碼和登入設定。':e.message||'操作失敗，請重試。';}
 async function act(fn){try{await fn();}catch(e){notice(friendly(e),true);}}
 function on(id,fn){const el=$(id);if(el)el.onclick=()=>act(fn);}

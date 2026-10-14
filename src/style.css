@@ -45,3 +45,9 @@
 @media(min-width:1000px){.host #controls{display:grid;grid-template-columns:320px minmax(0,1fr)}.host-welcome{grid-column:1/-1;padding:18px 28px;min-height:100px}.host-mascots{height:76px}.host-mascots .character{width:58px;height:76px}.host-room{flex-direction:column;align-items:flex-start;justify-content:center;padding:24px 28px;gap:22px;border-right:1px solid #e4d7b9}.host .room-actions{justify-content:flex-start;gap:8px}.host .room-actions button{font-size:12px;padding:9px 12px;min-height:42px}.host .room-management{grid-column:1/-1}.host .question-picker{padding:22px 28px}.host .host-welcome h1{font-size:30px}}
 @media(min-width:1000px){.display .layout{grid-template-rows:minmax(0,1fr);min-height:0}.display #game{min-height:0}.display .question,.display .spotlight,.display .leaderboard{min-height:0}}
 @media(min-width:1000px) and (max-height:850px){.display #game:has(.spotlight){grid-template-rows:auto minmax(0,1.5fr) minmax(0,1fr)}}
+
+/* Dismissible status messages on all three pages. */
+#notice:not(:empty){display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+#notice>span{min-width:0;overflow-wrap:anywhere;align-self:center}
+#notice .notice-close{flex:0 0 44px;width:44px;min-height:44px;padding:0;border:0;border-radius:8px;background:transparent;color:inherit;font-size:28px;line-height:1;font-weight:500}
+#notice .notice-close:hover{background:#0000000d}
