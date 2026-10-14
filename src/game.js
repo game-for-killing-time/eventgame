@@ -20,12 +20,21 @@ export function startRound(room,question,now,duration=45) {
 export function settleRoom(room,expectedRound,expectedCode=room?.public?.state?.code) {
  if(!room?.public?.state || room.public.state.round!==expectedRound || room.public.state.code!==expectedCode) return;
  const s=room.public.state;
- if(s.status==='revealed') return migrateAffinity(room);
+ if(s.status==='revealed') return publishRevealedChoices(migrateAffinity(room));
  if(s.status!=='closed') return;
  migrateAffinity(room);
  room.public.results??={};
  room.public.results[expectedRound]??=tally(room.answers?.[expectedRound]||{});
  addAffinityRound(room.hostOnly.affinity,expectedRound,room.answers?.[expectedRound]||{});
  room.public.island=islandLayout(room.public.members,room.hostOnly.affinity.pairs,expectedRound);
- s.status='revealed'; return room;
+ s.status='revealed'; return publishRevealedChoices(room);
+}
+// Publish only personal choices from completed rounds, never predictions or open answers.
+export function publishRevealedChoices(room){
+ const s=room?.public?.state;if(!s)return room;
+ for(const [round,result] of Object.entries(room.public.results||{})){
+  if(Number(round)>s.round||(Number(round)===s.round&&!['revealed','ended'].includes(s.status)))continue;
+  result.choices??=Object.fromEntries(Object.entries(room.answers?.[round]||{}).filter(([,a])=>Number.isInteger(a.choice)&&a.choice>=0&&a.choice<4).map(([id,a])=>[id,a.choice]));
+ }
+ return room;
 }

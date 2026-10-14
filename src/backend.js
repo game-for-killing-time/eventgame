@@ -1,7 +1,7 @@
 import {migrateAffinity} from './affinity.js';
 import {relayEffects} from './effects.js';
 import {config} from '../config.js';
-import {newRoom,startRound,settleRoom} from './game.js';
+import {newRoom,startRound,settleRoom,publishRevealedChoices} from './game.js';
 
 export async function connect(role,onConnection) {
  if(!config.firebase || new URLSearchParams(location.search).get('demo')==='1') return demo(role,onConnection);
@@ -31,7 +31,7 @@ export async function connect(role,onConnection) {
  if(action==='relayEffects'){await d.runTransaction(ref('room'),r=>r?relayEffects(r,value,api.now()):null,{applyLocally:false});return;}
  if(action==='chatEffects'||action==='submitEffects'){await d.update(ref('room'),{[`public/state/${action}`]:value,[`effects/${action==='chatEffects'?'chat':'submissions'}`]:null});return;}
  if(action==='clean'){const r=await d.runTransaction(ref('room'),room=>!room||room.public.state.status==='ended'?null:undefined,{applyLocally:false});if(!r.committed) throw Error('請先結束房間。');return;}
- if(action==='migrate'){const expected=await get('room/public/state');if(!expected)return;await d.runTransaction(ref('room'),r=>!r?null:r.public.state.code===expected.code?migrateAffinity(r):undefined,{applyLocally:false});return;}
+ if(action==='migrate'){const expected=await get('room/public/state');if(!expected)return;await d.runTransaction(ref('room'),r=>!r?null:r.public.state.code===expected.code?publishRevealedChoices(migrateAffinity(r)):undefined,{applyLocally:false});return;}
  if(action==='reveal'){const expected=await get('room/public/state');const r=await d.runTransaction(ref('room'),room=>room?settleRoom(room,expected.round,expected.code):null,{applyLocally:false});if(!r.committed)throw Error('這輪狀態已改變，請重新確認。');return;}
  if(action==='start'){await d.runTransaction(ref('room/public/state'),s=>s?startRound({public:{state:s}},value,api.now()):null,{applyLocally:false});await d.remove(ref('room/public/story'));return;}
  if(action==='close'||action==='extend'){const expected=value||await get('room/public/state');await d.runTransaction(ref('room/public/state'),s=>{if(!s)return null;if(s.code!==expected.code||s.round!==expected.round||s.status!=='open'||(action==='extend'&&s.deadline<=api.now())) return;return {...s,...(action==='close'?{status:'closed'}:{deadline:s.deadline+15000})};},{applyLocally:false});return;}
@@ -70,7 +70,7 @@ function demo(role,onConnection){
  if(action==='start'){r.public.state=startRound(r,value,Date.now());delete r.public.story;}
  if(action==='close'&&s.status==='open')s.status='closed';
  if(action==='extend'&&s.status==='open'&&s.deadline>Date.now())s.deadline+=15000;
- if(action==='migrate')r=migrateAffinity(r);
+ if(action==='migrate')r=publishRevealedChoices(migrateAffinity(r));
  if(action==='reveal')r=settleRoom(r,s.round,s.code)||r;
  if(action==='end'){s.status='ended';s.locked=true;s.chatOpen=false;}
  if(action==='clean'){if(s.status!=='ended')throw Error('請先結束房間。');r=null;}

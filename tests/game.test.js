@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {tally,leaderboard,newRoom,startRound,settleRoom} from '../src/game.js';
+import {tally,leaderboard,newRoom,startRound,settleRoom,publishRevealedChoices} from '../src/game.js';
 import {questions} from '../src/questions.js';
 test('12 valid four-choice questions',()=>{assert.equal(questions.length,12);for(const q of questions)assert.equal(q.options.length,4);});
 test('ties award any winning prediction; zero votes award nothing',()=>{assert.deepEqual(tally({a:{choice:0,prediction:1},b:{choice:1,prediction:0},c:{choice:2,prediction:3}}),{counts:[1,1,1,0],total:3,winners:[0,1,2],points:{a:1,b:1,c:0}});assert.deepEqual(tally(),{counts:[0,0,0,0],total:0,winners:[],points:{}});});
@@ -58,4 +58,15 @@ test('effects publish only recent sanitized presentation data and are idempotent
  r.chat.a.messages[2]={text:'muted',at:11000};r.moderation.a={muted:true};assert.equal(relayEffects(r,{code:'PARTY1',kind:'chat',uid:'a',seq:2},11001),undefined);
  r.moderation={};r.public.state.chatEffects=false;assert.equal(relayEffects(r,{code:'PARTY1',kind:'chat',uid:'a',seq:2},11001),undefined);
  r.public.state.status='ended';assert.equal(relayEffects(r,{code:'PARTY1',kind:'submissions',round:1},11001),undefined);
+});
+
+test('revealed choices publish once, never include predictions or unfinished rounds',()=>{
+ const r=newRoom('PARTY1');r.public.members={a:{name:'A',seat:'0'},b:{name:'B',seat:'1'}};
+ r.public.state=startRound(r,questions[0],1000);r.answers[1]={a:{choice:2,prediction:0,at:1100},b:{choice:1,prediction:3,at:1200}};
+ assert.equal(r.public.results,undefined);assert.equal(settleRoom(r,1),undefined);
+ r.public.state.status='closed';settleRoom(r,1);assert.deepEqual(r.public.results[1].choices,{a:2,b:1});
+ const once=structuredClone(r.public.results);settleRoom(r,1);assert.deepEqual(r.public.results,once);
+ r.public.state=startRound(r,questions[1],2000);r.answers[2]={a:{choice:0,prediction:2,at:2100}};
+ delete r.public.results[1].choices;publishRevealedChoices(r);assert.deepEqual(r.public.results[1].choices,{a:2,b:1});assert.equal(r.public.results[2],undefined);
+ assert.deepEqual(Object.keys(r.public.results[1].choices).sort(),['a','b']);
 });

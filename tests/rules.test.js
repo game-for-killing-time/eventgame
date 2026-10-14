@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {initializeTestEnvironment,assertFails,assertSucceeds} from '@firebase/rules-unit-testing';
 import {ref,set,get,update,query,orderByChild,limitToLast,onValue,goOffline,goOnline,serverTimestamp,runTransaction} from 'firebase/database';
 import {newRoom,startRound,settleRoom} from '../src/game.js';
+import {relayEffects} from '../src/effects.js';
 import {questions} from '../src/questions.js';
 let env;
 const db=(uid,provider='anonymous')=>env.authenticatedContext(uid,{firebase:{sign_in_provider:provider}}).database();
@@ -129,4 +130,25 @@ test('public effects are host-only writes, switch-gated reads, no private answer
  await set(ref(h,'room/public/state/chatEffects'),false);await assertFails(get(ref(display,'room/effects/chat')));await assertSucceeds(get(ref(display,'room/effects/submissions')));
  await set(ref(h,'room/public/state/submitEffects'),false);await assertFails(get(ref(display,'room/effects/submissions')));
  await update(ref(h,'room/public/state'),{chatEffects:true,submitEffects:true,status:'ended'});await assertFails(get(ref(display,'room/effects/chat')));await assertFails(get(ref(display,'room/effects/submissions')));
+});
+
+test('only revealed personal choices become public, predictions stay private',async()=>{
+ await member('a');await member('b');const a=db('a'),b=db('b'),h=host(),display=env.unauthenticatedContext().database();
+ await submit(a,'a',2,1);await submit(b,'b',0,3);
+ for(const c of [b,display]){assert.equal((await get(ref(c,'room/public/results/1/choices'))).exists(),false);await assertFails(get(ref(c,'room/answers/1/a')));}
+ await update(ref(h,'room/public/state'),{status:'closed'});await runTransaction(ref(h,'room'),r=>r?settleRoom(r,1,'PARTY1'):null,{applyLocally:false});
+ for(const c of [b,display]){assert.deepEqual((await get(ref(c,'room/public/results/1/choices'))).val(),{a:2,b:0});await assertFails(get(ref(c,'room/answers/1/a/prediction')));await assertFails(set(ref(c,'room/public/results/1/choices/a'),1));}
+});
+
+
+test('host relay transactions deliver chat and first submission to independent clients',async()=>{
+ await member('a');const a=db('a'),h=host(),display=env.unauthenticatedContext().database();
+ await submit(a,'a',2,1);await chat(a,'a','new message');
+ const relay=kind=>runTransaction(ref(h,'room'),r=>r?relayEffects(r,{code:'PARTY1',kind,round:1,uid:'a',seq:1},Date.now()):null,{applyLocally:false});
+ await relay('submissions');await relay('chat');
+ const expected=(await get(ref(display,'room/effects/submissions'))).val();
+ assert.deepEqual(Object.keys(expected.items),['a']);
+ for(const c of [a,display])assert.equal((await get(ref(c,'room/effects/chat/a/text'))).val(),'new message');
+ await submit(a,'a',0,3);await relay('submissions');assert.deepEqual((await get(ref(display,'room/effects/submissions'))).val(),expected);
+ await assertFails(set(ref(a,'room/effects/submissions/items/a'),0));
 });
