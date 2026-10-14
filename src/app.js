@@ -29,7 +29,7 @@ ${role==='host'?`<section id="controls" class="panel" hidden><div class="host-we
 ${role==='viewer'?'<div id="viewerStatus" hidden></div><nav id="playerTabs" class="player-tabs" aria-label="玩家功能" hidden><button data-pane="answer" aria-pressed="true">作答</button><button data-pane="chat" aria-pressed="false">聊天 <span id="chatBadge"></span></button><button data-pane="board" aria-pressed="false">排行榜</button></nav>':''}<div class="layout"><section id="game" aria-label="題目與結果"></section>${role!=='display'?`<aside id="social" hidden><details class="panel" open><summary>同桌聊天 <span>可以只玩，不用發言</span></summary><p class="hint" id="chatHint">作答時先別暴雷，讓大家自己選！</p><div id="messages" class="messages" aria-live="polite"></div><form id="chatForm"><label for="chatText">說點甚麼</label><div class="input-row"><input id="chatText" maxlength="240" placeholder="最多 240 字，間隔 3 秒" autocomplete="off"><button class="primary">送出</button></div></form></details><section id="storyBox" class="panel" hidden><h2>這個答案背後有故事？</h2><p>投稿先給主持人看，選中才會出現在直播。</p><form id="storyForm"><label for="storyText">你的故事（最多 500 字）</label><textarea id="storyText" maxlength="500" rows="4"></textarea><button class="accent">交給主持人</button></form></section></aside>`:''}</div>
 ${role==='viewer'?'<button id="chatEntry" class="chat-entry" hidden>同桌聊天 <span id="chatEntryCount">打開聊天室</span></button><section id="islandArea" hidden></section>':''}
 ${role==='host'?'<section id="affinityPanel" class="panel" hidden><h2>島民默契 · 僅主持人可見</h2><label for="affinityPlayer">選擇玩家</label><select id="affinityPlayer"></select><div id="affinityRows"></div></section><div class="host-bottom"><section class="panel"><h2>在座朋友</h2><div id="members"></div></section><section class="panel"><h2>故事收件匣</h2><p>只有你能看到未選中的投稿。</p><div id="stories"></div></section></div>':''}
-</main><footer><span>選擇沒有標準答案，也不是人格測驗。</span><a id="twitch" target="_blank" rel="noopener">回到 Twitch ↗</a></footer>`;
+</main>${role==='viewer'?'':'<footer><span>選擇沒有標準答案，也不是人格測驗。</span><a id="twitch" target="_blank" rel="noopener">回到 Twitch ↗</a></footer>'}`;
 const updateVoterDialog=role==='viewer'?createVoterDialog($('game'),()=>pub?.state?({...pub.state,result:pub.results?.[pub.state.round],members:pub.members||{},uid:api?.uid(),options:pub.state.question?.options||[]}):null):()=>{};
 const updateIsland=role==='viewer'?createIsland($('islandArea')):()=>{};
 const updateInvite=role==='host'?createInvite($('inviteTools')):()=>{};
@@ -40,8 +40,10 @@ function setPane(value){pane=value;document.body.dataset.pane=value;if(value==='
 function updateBadges(){if($('chatBadge'))$('chatBadge').textContent=unread?`(${unread})`:'';if($('chatEntryCount'))$('chatEntryCount').textContent=unread?`${unread} 則新訊息`:'打開聊天室';}
 document.querySelectorAll('[data-pane]').forEach(b=>b.onclick=()=>setPane(b.dataset.pane));if($('chatEntry'))$('chatEntry').onclick=()=>setPane('chat');setPane('answer');
 async function ensureMigration(){if(!hostReady||!pub?.state||migrating||migrationCode===pub.state.code)return;migrating=true;const code=pub.state.code;try{await api.command('migrate');migrationCode=code;}catch(e){notice(friendly(e),true);}finally{migrating=false;}}
+if($('twitch')){
 try{const u=new URL(config.twitchUrl);$('twitch').href=u.protocol==='https:'?u.href:'https://www.twitch.tv/';}catch{$('twitch').href='https://www.twitch.tv/';}
 $('twitch').textContent=new URL($('twitch').href).pathname==='/'?'前往 Twitch ↗':'回到直播頻道 ↗';
+}
 function notice(msg,error=false){
  const box=$('notice');box.replaceChildren();box.className=error?'error':'success';
  if(!msg)return;
