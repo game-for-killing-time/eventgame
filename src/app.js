@@ -33,6 +33,7 @@ function updateBadges(){if($('chatBadge'))$('chatBadge').textContent=unread?`(${
 document.querySelectorAll('[data-pane]').forEach(b=>b.onclick=()=>setPane(b.dataset.pane));if($('chatEntry'))$('chatEntry').onclick=()=>setPane('chat');setPane('answer');
 async function ensureMigration(){if(!hostReady||!pub?.state||migrating||migrationCode===pub.state.code)return;migrating=true;const code=pub.state.code;try{await api.command('migrate');migrationCode=code;}catch(e){notice(friendly(e),true);}finally{migrating=false;}}
 try{const u=new URL(config.twitchUrl);$('twitch').href=u.protocol==='https:'?u.href:'https://www.twitch.tv/';}catch{$('twitch').href='https://www.twitch.tv/';}
+$('twitch').textContent=new URL($('twitch').href).pathname==='/'?'前往 Twitch ↗':'回到直播頻道 ↗';
 function notice(msg,error=false){
  const box=$('notice');box.replaceChildren();box.className=error?'error':'success';
  if(!msg)return;
@@ -61,6 +62,7 @@ function entry(){
 function eligible(){return role==='viewer'&&pub?.members?.[api.uid()]&&savedCode===pub?.state?.code&&!moderation.removed;}
 function render(){
  const s=pub?.state,joined=eligible();entry();
+ if(role==='host'&&!s){const m=document.querySelector('.room-management');m.open=false;m.dataset.roomState='';m.querySelector('summary').textContent='房間管理與登出';}
  if(role==='viewer'){for(const id of ['viewerStatus','playerTabs','chatEntry','islandArea'])$(id).hidden=!joined;document.body.classList.toggle('in-room',!!joined);if(joined){$('viewerStatus').innerHTML=`<span>房間 <b>${esc(s.code)}</b> · ${Object.keys(pub.members||{}).length} 人已入座</span><span class="viewer-identity">${characterMarkup(characterId(api.uid(),s.code))}<b>${esc(pub.members[api.uid()].name)}</b><small>P${String(Number(pub.members[api.uid()].seat??0)+1).padStart(2,'0')}</small></span>`;updateIsland(pub,api.uid());}}
  if(!s){if($('affinityPanel')){$('affinityPanel').hidden=true;$('affinityRows').textContent='';}replace('game','<div class="empty"><span class="big-mark">◒</span><h1>小桌還沒開場</h1><p>主持人開好房間後，就可以一起入座。</p></div>');if($('social'))$('social').hidden=true;if(hostReady){for(const id of ['lock','toggleChat','end','clean','start','extend','close','reveal'])$(id).disabled=true;$('submitted').textContent='等待開場';$('roomLinks').innerHTML='<b>還沒有房間</b><span>建立房間後，邀請朋友入座。</span>';$('hostGuide').textContent='先建立房間，再選一道暖場題。';$('members').textContent='';$('stories').textContent='';}return;}
  const result=pub.results?.[s.round], isOpen=s.status==='open'&&api.now()<s.deadline, count=Object.keys(pub.members||{}).length;
@@ -95,7 +97,11 @@ function renderHost(){
  $('hostGuide').textContent={waiting:'朋友入座後，選一道暖場題開始。',open:'作答進行中，可延長或提前截止，不必等所有人。',closed:'作答已鎖定，準備好就揭曉大家的選擇。',revealed:'留點時間聽故事，再選下一題。',ended:'活動已結束；需要保留資料請先匯出，再清理。'}[s.status]||'';
  $('lock').textContent=s.locked?'重新開放加入':'鎖定加入';$('toggleChat').textContent=s.chatOpen?'關閉聊天':'開啟聊天';
  $('create').disabled=true;for(const id of ['lock','toggleChat','end'])$(id).disabled=s.status==='ended';$('clean').disabled=s.status!=='ended';$('start').disabled=!['waiting','revealed'].includes(s.status);$('reveal').disabled=!['closed','revealed'].includes(s.status);$('close').disabled=s.status!=='open';$('extend').disabled=s.status!=='open'||api.now()>=s.deadline;
- $('roomLinks').innerHTML=`<span class="host-code-label">邀請朋友入座</span><b class="host-room-code">${esc(s.code)}</b><span class="host-links"><a href="${esc(link('index',s.code))}" target="_blank" rel="noopener">開啟觀眾網址 ↗</a><a href="${link('display')}" target="_blank" rel="noopener">開啟 OBS 展示 ↗</a></span>`;
+ const ended=s.status==='ended';
+ $('roomLinks').innerHTML=`<span class="host-code-label">${ended?'本場已結束 · 不再接受加入':s.locked?'已暫停接受新朋友':'邀請朋友入座'}</span><b class="host-room-code">${esc(s.code)}</b>${ended?'<p class="hint">這是保留的上一場紀錄。確認不需保留後，清理資料即可建立新房間。</p>':''}<span class="host-links">${!ended?`<a href="${esc(link('index',s.code))}" target="_blank" rel="noopener">開啟觀眾網址 ↗</a>`:''}<a href="${link('display')}" target="_blank" rel="noopener">開啟 OBS 展示 ↗</a></span>`;
+ const management=document.querySelector('.room-management');
+ if(management.dataset.roomState!==`${s.code}/${s.status}`){management.open=ended;management.dataset.roomState=`${s.code}/${s.status}`;}
+ management.querySelector('summary').textContent=ended?'本場已結束：清理資料後開新場':'房間管理與登出';
  $('members').innerHTML=Object.entries(pub.members||{}).map(([uid,m])=>`<div class="member">${characterMarkup(characterId(uid,s.code))}<b>${esc(m.name)}</b><button data-mute="${esc(uid)}">${privateRoom.moderation?.[uid]?.muted?'解除禁言':'禁言'}</button><button data-remove="${esc(uid)}" class="danger">移除</button></div>`).join('')||'<p>等朋友們加入。</p>';
  $('stories').innerHTML=Object.entries(privateRoom.stories?.[s.round]||{}).map(([uid,m])=>`<article class="story-review"><b>${esc(pub.members?.[uid]?.name||'已離開的朋友')}</b><p>${esc(m.text)}</p><button data-story="${esc(uid)}">選到直播展示</button></article>`).join('')||'<p>這輪還沒有投稿。</p>';
  if(pub.story)$('stories').innerHTML+=button('withdraw','撤下展示故事');
@@ -118,7 +124,9 @@ function renderChat(){if(!$('messages'))return;const msgs=Object.entries(chatDat
  document.querySelectorAll('[data-delete]').forEach(b=>b.onclick=()=>act(()=>api.command('deleteMessage',{uid:b.dataset.delete,id:b.dataset.id})));
 }
 try{
- api=await connect(role,s=>{$('connection').textContent=s;if(s==='已連線'&&api)ensureMigration();});$('mode').textContent=api.mode+(api.mode.startsWith('本機')?' · 同一瀏覽器分頁共用資料；主持頁建立 PARTY1 即可試玩。':'');
+ api=await connect(role,s=>{$('connection').textContent=s;if(s==='已連線'&&api)ensureMigration();});
+ const isDemo=api.mode.startsWith('本機');$('mode').hidden=!isDemo;
+ $('mode').textContent=isDemo?'試玩示範 · 只在這個瀏覽器同步，不是多人連線。主持頁建立 PARTY1 即可試玩。':'';
  if(role==='host'){hostReady=await api.checkHost().catch(e=>{notice(friendly(e),true);return false;});watchPrivate();}
  api.watch('room/public',p=>{const previous=pub?.state;pub=p;const changed=p?.state?.round!==previous?.round||p?.state?.code!==previous?.code;if(p?.state?.code!==previous?.code){unread=0;chatInitialized=false;seenMessages.clear();migrationCode=null;}if(changed){choice=null;prediction=null;ack='';answerRound=p?.state?.round;}render();if(!p&&$('create'))$('create').disabled=false;if(hostReady&&(privateRound!==p?.state?.round||changed))watchPrivate();if(changed||(!previous&&p))watchOwn();syncChats();},e=>notice(friendly(e),true));
  on('create',()=>api.create());on('lock',()=>api.command('lock',!pub.state.locked));on('toggleChat',()=>api.command('chatOpen',!pub.state.chatOpen));on('end',()=>api.command('end'));on('clean',async()=>{if(confirm('永久清理這個已結束房間的答案、聊天、故事和分數？'))await api.command('clean');});

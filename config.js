@@ -12,6 +12,7 @@ export const firebaseWebConfig = {
 export const config = {
   // Keep local demo mode until the database URL has been provided.
   firebase: firebaseWebConfig.databaseURL ? firebaseWebConfig : null,
-  twitchUrl: 'https://www.twitch.tv/',
+  twitchUrl: 'https://www.twitch.tv/hohohohohohohoho56',
   emulators: false
 };
+
