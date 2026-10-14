@@ -23,6 +23,6 @@ export function createIsland(container){
    if(!node){node=document.createElement('div');node.className='islander';node.dataset.uid=id;node.innerHTML=`<div class="islander-walk" style="--duration:${5+(Number(m.seat)||0)%5}s;--delay:-${Number(m.seat)||0}s">${characterMarkup(characterId(id,code),true)}</div><div class="islander-name">${id===uid?'<span class="you-tag">你</span>':''}<b>${escape(m.name)}</b><small>P${String(Number(m.seat??activeIds.indexOf(id))+1).padStart(2,'0')}</small></div>`;world.append(node);}
    node.dataset.x=x;node.style.transform=`translateX(${x}px)`;node.classList.toggle('is-you',id===uid);edge=Math.max(edge,x+136);
   }
-  world.style.width=`${edge}px`;container.querySelector('h2').textContent='島民散步中';
+  world.style.width=`${edge}px`;container.querySelector('h2').textContent=`${activeIds.length} 位島民散步中`;
  };
 }
