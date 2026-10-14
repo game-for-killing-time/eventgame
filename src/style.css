@@ -30,7 +30,7 @@
 @media(max-width:600px){.viewer.in-room header{padding:8px 12px;gap:8px}.viewer.in-room .brand-name{font-size:14px}.viewer.in-room .brand-sign{width:86px;height:42px}.viewer.in-room #connection{font-size:10px;margin-left:0}.viewer.in-room main{padding:10px 10px 24px}.viewer #viewerStatus{font-size:11px;padding:8px 10px;flex-wrap:wrap}.viewer-identity>b{max-width:150px}.viewer.in-room .question{padding:17px 14px}.viewer.in-room .question h1{font-size:27px;margin:18px 0 22px}.viewer.in-room .timer{font-size:12px;padding:7px 9px}.viewer.in-room .section-title{font-size:12px;gap:6px}.viewer.in-room .option{font-size:17px;gap:10px;padding:12px;min-height:65px}.viewer.in-room .option .letter{width:32px;height:32px}.player-tabs{width:100%;order:initial}.viewer.in-room .submit-row button{font-size:20px}.viewer.in-room .spotlight{padding:20px}.viewer.in-room .spotlight blockquote{font-size:18px}.island-heading h2{font-size:13px}}
 @media(prefers-reduced-motion:reduce){.islander{transition:none!important}.islander-walk{animation:none!important}}
 
-.character img{width:100%;height:100%;left:0;top:0;clip-path:none;object-fit:contain}.character{background:transparent}
+.character img{width:55px;height:55px;left:-2px;top:0;clip-path:none;object-fit:contain}.character{background:transparent}
 .viewer.in-room{background-image:url('../public/art/island-walk.png');background-position:center;background-size:cover}.island-scroll{background:#f4dca7 url('../public/art/island-walk.png') center bottom / auto 400px repeat-x}.islander-walk .character{animation:island-facing calc(var(--duration) * 2) steps(1,end) var(--delay) infinite}.motion-paused .islander-walk .character{animation-play-state:paused}@keyframes island-facing{0%,100%{transform:scaleX(1)}50%{transform:scaleX(-1)}}
 
 .motion-option{font-size:12px;color:#52654d;margin:8px 12px;display:flex;align-items:center;gap:6px;min-height:36px}.motion-option input{width:18px;height:18px;accent-color:#087f73}.reduced-motion .islander{transition:none!important}.reduced-motion .islander-walk,.reduced-motion .islander-walk .character{animation:none!important}
@@ -140,7 +140,7 @@
 .viewer.in-room .room-info-pill{display:inline-flex;align-items:center;gap:4px;background:#fffdf8;border-radius:999px;padding:7px 12px;white-space:nowrap;color:#38524b}
 .viewer.in-room .viewer-identity{color:#183d35;text-shadow:0 1px 2px #fff}
 .viewer.in-room .player-avatar{display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;flex:0 0 42px;border-radius:50%;background:#fff;overflow:hidden}
-.viewer.in-room .player-avatar .character{width:36px;height:42px;aspect-ratio:auto;transform:translateY(3px)}
+.viewer.in-room .player-avatar .character{width:50px;height:50px;aspect-ratio:auto;transform:translateY(3px)}
 .viewer.in-room .viewer-identity{gap:9px;max-width:100%}
 .viewer.in-room .viewer-identity>b{max-width:none;white-space:normal;overflow-wrap:anywhere}
 /* Compact status lamp; retain the status text for assistive technology. */
