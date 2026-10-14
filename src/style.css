@@ -149,3 +149,12 @@
 #connection[data-state=offline],.viewer.in-room #connection[data-state=offline]{background:#d65c45;box-shadow:0 0 0 1px #91473766}
 .viewer.in-room #connection{top:9px;right:12px}
 .connection-label{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+/* An open, full-width beach beneath the answer card. */
+.viewer.in-room main{padding-bottom:0}
+.viewer.in-room #islandArea{width:100%;max-width:none;margin:12px 0 0;padding:0;border:0;border-radius:0;box-shadow:none;background:transparent}
+.viewer.in-room .island-scroll{border-radius:0}
+.viewer.in-room .island-world{height:260px}
+.viewer.in-room .island-heading{top:12px;margin-inline:16px}
+.viewer.in-room .islander-name{min-height:0;padding:6px 5px;border-radius:12px}
+.viewer.in-room .islander-name b{white-space:normal;overflow-wrap:anywhere;overflow:visible;text-overflow:clip;line-height:1.35}
+.viewer.in-room .islander{bottom:28px}

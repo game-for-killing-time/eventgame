@@ -31,6 +31,7 @@ ${role==='viewer'?'<button id="chatEntry" class="chat-entry" hidden>同桌聊天
 ${role==='host'?'<section id="affinityPanel" class="panel" hidden><h2>島民默契 · 僅主持人可見</h2><label for="affinityPlayer">選擇玩家</label><select id="affinityPlayer"></select><div id="affinityRows"></div></section><div class="host-bottom"><section class="panel"><h2>在座朋友</h2><div id="members"></div></section><section class="panel"><h2>故事收件匣</h2><p>只有你能看到未選中的投稿。</p><div id="stories"></div></section></div>':''}
 </main>${role==='viewer'?'':'<footer><span>選擇沒有標準答案，也不是人格測驗。</span><a id="twitch" target="_blank" rel="noopener">回到 Twitch ↗</a></footer>'}`;
 const updateVoterDialog=role==='viewer'?createVoterDialog($('game'),()=>pub?.state?({...pub.state,result:pub.results?.[pub.state.round],members:pub.members||{},uid:api?.uid(),options:pub.state.question?.options||[]}):null):()=>{};
+if(role==='viewer')document.querySelector('main').after($('islandArea'));
 const updateIsland=role==='viewer'?createIsland($('islandArea')):()=>{};
 const updateInvite=role==='host'?createInvite($('inviteTools')):()=>{};
 let updateEffects=()=>{}; const relayed=new Set();let relayWarningAt=0;
