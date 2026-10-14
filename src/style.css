@@ -51,3 +51,5 @@
 #notice>span{min-width:0;overflow-wrap:anywhere;align-self:center}
 #notice .notice-close{flex:0 0 44px;width:44px;min-height:44px;padding:0;border:0;border-radius:8px;background:transparent;color:inherit;font-size:28px;line-height:1;font-weight:500}
 #notice .notice-close:hover{background:#0000000d}
+
+.host #inviteTools{width:100%;min-width:0;font-size:12px}.host #inviteTools label{margin-bottom:7px}.host #inviteTools input{font-size:12px;padding:10px}.host #inviteTools .copy-invite{margin-top:10px;width:100%;background:#e2f1e6;color:#245d4a;min-height:44px}.host #inviteTools .invite-status:empty,.host #inviteTools .invite-warning:empty{display:none}.host #inviteTools .invite-status{color:#245d4a;margin:8px 0}.host .invite-qr{margin-top:12px}.host .invite-qr summary{min-height:44px;padding:12px 0}.host .invite-qr canvas{display:block;width:256px;max-width:100%;height:auto;background:white;border-radius:4px}.host .invite-qr p{font-size:12px}.host .host-room{flex-wrap:wrap}@media(min-width:851px) and (max-width:999px){.host #inviteTools{max-width:300px}}

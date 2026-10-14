@@ -125,3 +125,7 @@ GitHub Actions 已設定執行遊戲、規則測試及建置後才發布。尚�
 - 主持及展示瀏覽器沒有捕捉到 console error。展示頁沒有角色散步區。測試結束還原本機模擬資料；沒有變動正式 Firebase。
 - 截圖：`host-redesign-desktop.png`、`host-redesign-mobile.png`、`broadcast-redesign-1080.png`、`broadcast-redesign-720.png`、`broadcast-redesign-open.png`。
 - 尚未在真實手機或 OBS 操作；正式網域、長暱稱與自訂更長題目需要試播確認。720p 長故事字較小，直播優先建議 1920×1080，主持人選短故事較易閱讀。
+
+## 邀請工具驗證
+
+390px 手機視窗無頁面橫向溢出。複製按鈕完成後顯示確認；剪貼簿受限制時設有選取文字的替代操作。從實際頁面截圖以 OpenCV 解碼 QR，結果與欄位的完整邀請網址一致，含子路徑、demo 與 room 參數。鎖定時複製停用且 QR 隱藏，結束後整個邀請工具隱藏；測試後已還原模擬資料。尚未以實體手機相機掃描。
