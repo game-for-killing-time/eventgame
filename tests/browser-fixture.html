@@ -1,0 +1,14 @@
+<!doctype html><html lang="zh-Hant"><meta charset="utf-8"><title>本機 20 人介面測試</title><h1>本機模擬測試，不連線 Firebase</h1><button id="seed">備份並建立 20 人測試</button><button id="chat">送入測試新訊息</button><button id="answers">補齊其餘十九人答案</button><button id="restore">還原測試前資料</button><p id="state"></p><script type="module">
+import {newRoom,startRound,settleRoom} from '../src/game.js';import {questions} from '../src/questions.js';
+const keys=['hoho-demo-v1','hoho-demo-uid','hoho-demo-room','hoho-demo-name'];const state=document.querySelector('#state');
+if(!['127.0.0.1','localhost'].includes(location.hostname))throw Error('Local only');
+document.querySelector('#seed').onclick=()=>{
+ if(!localStorage.getItem('hoho-fixture-backup'))localStorage.setItem('hoho-fixture-backup',JSON.stringify(Object.fromEntries(keys.map(k=>[k,localStorage.getItem(k)]))));
+ const r=newRoom('PARTY1');for(let i=0;i<20;i++)r.public.members['test'+i]={name:i===19?'我是小島玩家':'島民'+(i+1),seat:String(i),code:'PARTY1',joined:Date.now()};
+ for(let n=1;n<=2;n++){r.public.state=startRound(r,questions[n-1],Date.now(),600);r.answers[n]={};for(let i=0;i<20;i++)r.answers[n]['test'+i]={choice:Math.floor(i/5),prediction:0,at:Date.now()};r.public.state.status='closed';settleRoom(r,n,'PARTY1');}
+ r.public.state=startRound(r,questions[0],Date.now(),600);localStorage.setItem('hoho-demo-v1',JSON.stringify(r));localStorage.setItem('hoho-demo-uid','test19');localStorage.setItem('hoho-demo-room','PARTY1');state.textContent='20 人測試已建立';
+};
+document.querySelector('#chat').onclick=()=>{const r=JSON.parse(localStorage.getItem('hoho-demo-v1'));r.chat??={};const c=r.chat.test0??={seq:0,messages:{},lastSent:0};c.messages[++c.seq]={text:'朋友的新訊息',at:Date.now()};localStorage.setItem('hoho-demo-v1',JSON.stringify(r));state.textContent='測試訊息已加入';};
+document.querySelector('#answers').onclick=()=>{const r=JSON.parse(localStorage.getItem('hoho-demo-v1'));r.answers[3]??={};for(let i=0;i<19;i++)r.answers[3]['test'+i]={choice:Math.floor(i/5),prediction:0,at:Date.now()};localStorage.setItem('hoho-demo-v1',JSON.stringify(r));state.textContent='其餘答案已加入，尚未揭曉';};
+document.querySelector('#restore').onclick=()=>{const b=JSON.parse(localStorage.getItem('hoho-fixture-backup')||'null');if(b){for(const [k,v]of Object.entries(b))v===null?localStorage.removeItem(k):localStorage.setItem(k,v);localStorage.removeItem('hoho-fixture-backup');}state.textContent='已還原';};
+</script></html>

@@ -1,0 +1,131 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "config": {
+      "hostUid": {
+        ".read": "auth != null"
+      }
+    },
+    "room": {
+      ".read": "auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous'",
+      ".write": "auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous'",
+      "public": {
+        ".read": true,
+        "state": {},
+        "members": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid && !data.exists() && newData.exists() && root.child('room/moderation').child($uid).child('removed').val() !== true && root.child('room/public/state').exists() && root.child('room/public/state').child('locked').val() !== true && root.child('room/public/state').child('status').val() !== 'ended'",
+            ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.hasChildren(['name','joined','code','seat']) && newData.parent().parent().child('seats').child(newData.child('seat').val()).val() === auth.uid)",
+            "name": {
+              ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.isString() && newData.val().length > 0 && newData.val().length <= 20)"
+            },
+            "joined": {
+              ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.val() === now)"
+            },
+            "code": {
+              ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.val() === root.child('room/public/state').child('code').val())"
+            },
+            "$other": {
+              ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (false)"
+            },
+            "seat": {
+              ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.isString() && newData.val().matches(/^([0-9]|1[0-9])$/))"
+            }
+          }
+        },
+        "seats": {
+          "$seat": {
+            ".write": "auth != null && !data.exists() && newData.val() === auth.uid && $seat.matches(/^([0-9]|1[0-9])$/)",
+            ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.parent().parent().child('members').child(auth.uid).child('seat').val() === $seat)"
+          }
+        },
+        "island": {
+          ".write": "auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous'"
+        }
+      },
+      "moderation": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid"
+        }
+      },
+      "answers": {
+        "$round": {
+          "$uid": {
+            ".read": "(auth != null && root.child('room/public/members').child(auth.uid).exists() && root.child('room/moderation').child(auth.uid).child('removed').val() !== true) && auth.uid === $uid",
+            ".write": "((auth != null && root.child('room/public/members').child(auth.uid).exists() && root.child('room/moderation').child(auth.uid).child('removed').val() !== true) && auth.uid === $uid) && newData.exists() && $round === '' + root.child('room/public/state').child('round').val() && root.child('room/public/state').child('status').val() === 'open' && now < root.child('room/public/state').child('deadline').val()",
+            ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.hasChildren(['choice','prediction','at']))",
+            "choice": {
+              ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.isNumber() && newData.val() % 1 === 0 && newData.val() >= 0 && newData.val() < 4)"
+            },
+            "prediction": {
+              ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.isNumber() && newData.val() % 1 === 0 && newData.val() >= 0 && newData.val() < 4)"
+            },
+            "at": {
+              ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.val() === now)"
+            },
+            "$other": {
+              ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (false)"
+            }
+          }
+        }
+      },
+      "stories": {
+        "$round": {
+          "$uid": {
+            ".read": "(auth != null && root.child('room/public/members').child(auth.uid).exists() && root.child('room/moderation').child(auth.uid).child('removed').val() !== true) && auth.uid === $uid",
+            ".write": "(((auth != null && root.child('room/public/members').child(auth.uid).exists() && root.child('room/moderation').child(auth.uid).child('removed').val() !== true) && auth.uid === $uid) && root.child('room/moderation').child(auth.uid).child('muted').val() !== true && root.child('room/public/state/status').val() !== 'ended') && newData.exists() && $round === '' + root.child('room/public/state').child('round').val() && root.child('room/public/state').child('status').val() === 'revealed'",
+            ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.hasChildren(['text','at']))",
+            "text": {
+              ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.isString() && newData.val().length > 0 && newData.val().length <= 500)"
+            },
+            "at": {
+              ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.val() === now)"
+            },
+            "$other": {
+              ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (false)"
+            }
+          }
+        }
+      },
+      "chat": {
+        "$uid": {
+          "lastSent": {
+            ".read": "(auth != null && root.child('room/public/members').child(auth.uid).exists() && root.child('room/moderation').child(auth.uid).child('removed').val() !== true) && auth.uid === $uid",
+            ".write": "(((auth != null && root.child('room/public/members').child(auth.uid).exists() && root.child('room/moderation').child(auth.uid).child('removed').val() !== true) && auth.uid === $uid) && root.child('room/moderation').child(auth.uid).child('muted').val() !== true && root.child('room/public/state/status').val() !== 'ended') && root.child('room/public/state').child('chatOpen').val() === true && newData.val() === now && (!data.exists() || now >= data.val() + 3000)"
+          },
+          "seq": {
+            ".read": "(auth != null && root.child('room/public/members').child(auth.uid).exists() && root.child('room/moderation').child(auth.uid).child('removed').val() !== true) && auth.uid === $uid",
+            ".write": "(((auth != null && root.child('room/public/members').child(auth.uid).exists() && root.child('room/moderation').child(auth.uid).child('removed').val() !== true) && auth.uid === $uid) && root.child('room/moderation').child(auth.uid).child('muted').val() !== true && root.child('room/public/state/status').val() !== 'ended') && newData.val() === (data.exists() ? data.val() + 1 : 1) && newData.parent().child('lastSent').val() === now"
+          },
+          "messages": {
+            ".read": "(auth != null && root.child('room/public/members').child(auth.uid).exists() && root.child('room/moderation').child(auth.uid).child('removed').val() !== true) && query.orderByChild === 'at' && query.limitToLast <= 3",
+            ".indexOn": [
+              "at"
+            ],
+            "$id": {
+              ".write": "(((auth != null && root.child('room/public/members').child(auth.uid).exists() && root.child('room/moderation').child(auth.uid).child('removed').val() !== true) && auth.uid === $uid) && root.child('room/moderation').child(auth.uid).child('muted').val() !== true && root.child('room/public/state/status').val() !== 'ended') && root.child('room/public/state').child('chatOpen').val() === true && !data.exists() && newData.exists() && $id === '' + (root.child('room/chat').child($uid).child('seq').exists() ? root.child('room/chat').child($uid).child('seq').val() + 1 : 1)",
+              ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.hasChildren(['text','at']) && newData.parent().parent().child('lastSent').val() === now && $id === '' + newData.parent().parent().child('seq').val())",
+              "text": {
+                ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.isString() && newData.val().length > 0 && newData.val().length <= 240)"
+              },
+              "at": {
+                ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.val() === now)"
+              },
+              "$other": {
+                ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (false)"
+              }
+            }
+          },
+          "$other": {
+            ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (false)"
+          }
+        }
+      },
+      "hostOnly": {
+        ".read": "auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous'",
+        ".write": "auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous'"
+      }
+    }
+  }
+}
