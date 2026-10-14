@@ -1,0 +1,10 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><base href="../dist/"><title>選項頭像堆疊 · 互動原型</title><link rel="stylesheet" href="../src/style.css"></head><body class="viewer in-room"><main><p style="font-size:12px">互動原型 · 模擬 20 位玩家，不連線 Firebase</p><div class="toolbar"><button id="crowd">多人分布</button><button id="all">20 人同選</button><button id="few">只有 1 人</button></div><section id="game"></section><p class="hint">點選「查看」開啟完整名單；可按 ×、Esc 或點背景關閉。</p></main><script type="module">
+import {voteStack,createVoterDialog} from '../src/voter-view.js';
+const names=['joker','Cake','hoho','阿橘','小兔','熊熊','松鼠','鴨鴨','青蛙','今天不想早起的島民','小樹','阿海','果果','小花','冬冬','星星','阿樂','月亮','阿布','小米'];
+const members=Object.fromEntries(names.map((name,i)=>['p'+i,{name,seat:String(i)}]));
+const options=['輕音樂','遊戲音效','朋友聊天','只聽雨聲'];let result;
+const root=document.querySelector('#game'),refresh=createVoterDialog(root,()=>({code:'PARTY1',round:5,status:'revealed',uid:'p0',members,options,result}));
+function render(mode){const choices=mode==='few'?{p0:0}:Object.fromEntries(names.map((_,i)=>['p'+i,mode==='all'?0:i<12?0:i<17?1:2]));const counts=options.map((_,i)=>Object.values(choices).filter(n=>n===i).length);result={choices,counts,winners:counts.flatMap((n,i)=>n===Math.max(...counts)?[i]:[])};
+root.innerHTML=`<article class="question"><div class="section-title"><span>第 5 題</span><span class="timer">已揭曉</span></div><h1>下雨天最適合配甚麼聲音？</h1><div class="options revealed">${options.map((o,i)=>`<div class="option option-${i}"><span class="letter">${'ABCD'[i]}</span><span>${o}</span>${voteStack(i,result,members,'p0','PARTY1')}</div>`).join('')}</div><p class="result-note">★ 最多人選 · 頭像綠框是你</p></article>`;refresh();}
+document.querySelector('#crowd').onclick=()=>render('crowd');document.querySelector('#all').onclick=()=>render('all');document.querySelector('#few').onclick=()=>render('few');render('crowd');
+</script></body></html>

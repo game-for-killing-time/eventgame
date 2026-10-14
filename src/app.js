@@ -1,3 +1,4 @@
+import {voteStack,createVoterDialog} from './voter-view.js';
 import {createEffects} from './effects-view.js';
 import {createInvite} from './invite.js';
 import {createIsland} from './island-view.js';
@@ -29,6 +30,7 @@ ${role==='viewer'?'<div id="viewerStatus" hidden></div><nav id="playerTabs" clas
 ${role==='viewer'?'<button id="chatEntry" class="chat-entry" hidden>同桌聊天 <span id="chatEntryCount">打開聊天室</span></button><section id="islandArea" hidden></section>':''}
 ${role==='host'?'<section id="affinityPanel" class="panel" hidden><h2>島民默契 · 僅主持人可見</h2><label for="affinityPlayer">選擇玩家</label><select id="affinityPlayer"></select><div id="affinityRows"></div></section><div class="host-bottom"><section class="panel"><h2>在座朋友</h2><div id="members"></div></section><section class="panel"><h2>故事收件匣</h2><p>只有你能看到未選中的投稿。</p><div id="stories"></div></section></div>':''}
 </main><footer><span>選擇沒有標準答案，也不是人格測驗。</span><a id="twitch" target="_blank" rel="noopener">回到 Twitch ↗</a></footer>`;
+const updateVoterDialog=role==='viewer'?createVoterDialog($('game'),()=>pub?.state?({...pub.state,result:pub.results?.[pub.state.round],members:pub.members||{},uid:api?.uid(),options:pub.state.question?.options||[]}):null):()=>{};
 const updateIsland=role==='viewer'?createIsland($('islandArea')):()=>{};
 const updateInvite=role==='host'?createInvite($('inviteTools')):()=>{};
 let updateEffects=()=>{}; const relayed=new Set();let relayWarningAt=0;
@@ -67,7 +69,7 @@ function entry(){
 }
 function eligible(){return role==='viewer'&&pub?.members?.[api.uid()]&&savedCode===pub?.state?.code&&!moderation.removed;}
 function render(){
- const s=pub?.state,joined=eligible();entry();
+ const s=pub?.state,joined=eligible();entry();updateVoterDialog();
  updateEffects(pub,role==='display'||joined);
  if(role==='host')updateInvite({url:s?new URL(link('index',s.code),location.href).href:'',available:hostReady&&!!s&&s.status!=='ended',demo:explicitDemo||!config.firebase,local:['localhost','127.0.0.1'].includes(location.hostname),locked:s?.locked});
  if(role==='host'&&!s){const m=document.querySelector('.room-management');m.open=false;m.dataset.roomState='';m.querySelector('summary').textContent='房間管理與登出';}
@@ -77,12 +79,12 @@ function render(){
  const canAnswer=joined&&isOpen;
  const board=leaderboard(pub.results,pub.members);
  const avatar=uid=>characterMarkup(characterId(uid,s.code));
- const voters=i=>role==='viewer'&&result&&['revealed','ended'].includes(s.status)?`<div class="option-voters" aria-label="選擇 ${'ABCD'[i]} 的玩家">${Object.entries(result.choices||{}).filter(([id,c])=>c===i&&pub.members?.[id]).sort(([a],[b])=>Number(pub.members[a].seat)-Number(pub.members[b].seat)).map(([id])=>`<span class="voter ${id===api.uid()?'voter-self':''}">${avatar(id)}<span>${esc(pub.members[id].name)}${id===api.uid()?'（你）':''}</span></span>`).join('')}</div>`:'';
+
  let html=`<div class="room-line"><span class="room-code">房間 <b>${esc(s.code)}</b></span><span>${count} / 20 人入座</span><span class="pill">${labels[s.status==='open'&&!isOpen?'closed':s.status]||'等待中'}</span></div>`;
 
  if(s.question){html+=`<article class="question"><div class="section-title"><span>第 ${s.round} 題</span><span id="timer" class="timer"></span></div><h1>${esc(s.question.text)}</h1>`;
  if(role==='viewer'&&joined&&s.status!=='revealed'&&s.status!=='ended')html+=`<fieldset ${canAnswer?'':'disabled'}><legend>我的答案</legend><div class="options">${s.question.options.map((o,i)=>`<label class="option option-${i} ${choice===i?'selected':''}"><input id="choice-${i}" name="choice" type="radio" value="${i}" ${choice===i?'checked':''}><span class="letter">${'ABCD'[i]}</span><span>${esc(o)}</span></label>`).join('')}</div></fieldset><fieldset ${canAnswer?'':'disabled'}><legend>猜誰是多數？ <small>猜中 +1 分</small></legend><div class="predictions">${s.question.options.map((o,i)=>`<label class="prediction ${prediction===i?'selected':''}"><input id="prediction-${i}" name="prediction" type="radio" value="${i}" ${prediction===i?'checked':''}><b>${'ABCD'[i]}</b><span>${esc(o)}</span></label>`).join('')}</div></fieldset><div class="submit-row"><button id="submit" class="primary" ${!canAnswer||sending||choice===null||prediction===null?'disabled':''}>${sending?'等伺服器確認…':ack==='已提交'?'更新我的答案':'一起提交'}</button><span id="ack" role="status">${esc(ack||'選答案，再猜多數。')}</span></div>`;
- else html+=`<div class="options ${result?'revealed':''}">${s.question.options.map((o,i)=>`<div class="option option-${i} ${result?.winners?.includes(i)?'most-votes':''}" style="--vote-share:${result?.total?Math.round(result.counts[i]/result.total*100):0}%"><span class="letter">${'ABCD'[i]}</span><span>${esc(o)}</span>${result?`<strong>${result.counts[i]} 票 ${result.winners?.includes(i)?'★':''}</strong><span class="vote-track" aria-hidden="true"><i></i></span>${voters(i)}`:''}</div>`).join('')}</div>`;
+ else html+=`<div class="options ${result?'revealed':''}">${s.question.options.map((o,i)=>`<div class="option option-${i} ${result?.winners?.includes(i)?'most-votes':''}" style="--vote-share:${result?.total?Math.round(result.counts[i]/result.total*100):0}%"><span class="letter">${'ABCD'[i]}</span><span>${esc(o)}</span>${result?(role==='viewer'?voteStack(i,result,pub.members||{},api.uid(),s.code):`<strong>${result.counts[i]} 票 ${result.winners?.includes(i)?'★':''}</strong><span class="vote-track" aria-hidden="true"><i></i></span>`):''}</div>`).join('')}</div>`;
  if(result)html+=`<p class="result-note">${result.total===0?'這題零票，不計分。下題再來！':`${result.total} 人作答 · ${result.winners.length>1?'最高票並列，猜中任一項都得分。':'★ 是最多人選的答案。'}`}${joined?`<br>你本輪得 ${result.points?.[api.uid()]||0} 分${result.points?.[api.uid()]===1?'，默契到位！':'，來聽聽大家的理由。'}`:''}</p>`;
  html+='</article>';
  }else html+=`<article class="question waiting"><div class="waiting-crew">${[0,1,2,3,4].map(i=>characterMarkup(i,true)).join('')}</div><h1>先坐好，題目快來了。</h1><p>選自己的答案，再猜最多人選哪個。不比手速，放心慢慢想。</p></article>`;
