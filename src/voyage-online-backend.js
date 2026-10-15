@@ -6,7 +6,7 @@ export async function voyageConnect(role,connection){
  if(!config.firebase)throw Error('尚未設定 Firebase');
  const testing=import.meta.env.DEV&&import.meta.env.VITE_STORY_EMULATOR==='1';
  const settings=testing?{apiKey:'demo-key',projectId:'demo-hoho',databaseURL:'https://demo-hoho.firebaseio.com'}:config.firebase;
- const app=initializeApp(settings,`story-${role}`),auth=A.getAuth(app),db=D.getDatabase(app);
+ const app=initializeApp(settings,role==='host'?'host':`story-${role}`),auth=A.getAuth(app),db=D.getDatabase(app);
  if(config.emulators||testing){A.connectAuthEmulator(auth,'http://127.0.0.1:9099');D.connectDatabaseEmulator(db,'127.0.0.1',9000);}
  await A.setPersistence(auth,role==='display'?A.inMemoryPersistence:A.browserLocalPersistence);await auth.authStateReady();
  let online=false,offset=0;D.onValue(D.ref(db,'.info/connected'),s=>{online=s.val()===true;connection(online);});D.onValue(D.ref(db,'.info/serverTimeOffset'),s=>offset=s.val()||0);

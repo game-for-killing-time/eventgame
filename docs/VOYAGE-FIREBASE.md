@@ -5,7 +5,7 @@
 開始整合時，本機已提交版本、origin/main 與備份分支同為 `6aab299`。整合期間另一項介面工作更新至 `841c740`，GitHub Pages 工作流程已確認成功；本次接續這個版本，保留營火介面變更。
 
 - 玩家：https://game-for-killing-time.github.io/eventgame/story.html
-- 主持：https://game-for-killing-time.github.io/eventgame/story.html?role=host
+- 統一主持入口：https://game-for-killing-time.github.io/eventgame/host.html（上方選「選邊站」或「12 幕冒險」）
 - OBS 文字展示：https://game-for-killing-time.github.io/eventgame/story.html?role=display
 - 本機模擬：`story.html?demo=1&role=host`（只有此模式有模擬玩家、自動填答）。
 - 舊 18 幕正式場次：`story.html?legacy=1&role=host`。新版使用 `/voyage`，舊 `/adventure` 與原有 `/room` 資料不會被轉換或刪除。
@@ -77,3 +77,11 @@ Web config 是公開的用戶端識別設定；服務帳號金鑰、密碼及管
 - 線上主持登入頁、玩家及展示入口可載入；空房間提前訂閱私人收件匣的問題已修正；部署 run `38696721833`（`1959a3a`）成功後，已重新驗證三個入口均已連線且沒有權限提示。
 - 正式帳號仍需主持自行登入並建立新房間。沒有代填、讀取或重設正式密碼；正式真人整場試播未聲稱完成。
 - 手機版介面截圖：`screenshots/voyage-firebase-390.png`（本機 Firebase Emulator，警示橫幅是 Emulator 專用）；正式主持頁：`screenshots/voyage-live-host.png`。
+
+## 統一主持入口（2026-10-15）
+
+`host.html` 保留選邊站原有設計；選「12 幕冒險」會使用同樣的主持小桌版面。兩個模式共用正式主持登入，房間、玩家及進度分開保存，不會自動搬移玩家。切換後請複製該模式的邀請連結。舊 `story.html?role=host` 仍然可用。
+
+切換不會暫停已開放題目的截止時間，建議完成本輪揭曉再切換；選邊站聊天彈幕轉送需要保留該模式主持頁開啟。這次僅更新網站，不需要重新發布 Firebase 規則。
+
+驗證：30 項單元測試通過；正式建置通過；本機模擬來回切換保留 PARTY1 的揭曉、分數及故事；Emulator 正式介面重新載入保留 YECKHZ 第 1 幕與兩位玩家；窄螢幕版面無水平溢出。實體手機未另外實測。
