@@ -48,7 +48,7 @@ test('Firebase omits empty winners array; revealed voter list still renders',()=
 import {spotlightQuestion} from '../src/spotlight-view.js';
 test('player markup has target-only choice form, guesser dual form and real revealed result without private counters',()=>{
  const r=room(2),s=open(r),props={s,pub:r.public,role:'viewer',uid:'p0',joined:true,canAnswer:true,choice:null,prediction:null};
- let html=spotlightQuestion(props);assert.ok(html.includes(questions[0].text));assert.ok(html.includes('name="choice"'));assert.ok(!html.includes('name="prediction"'));assert.ok(html.includes('提交我的答案'));
- html=spotlightQuestion({...props,uid:'p1'});assert.ok(html.includes('name="prediction"'));assert.ok(html.includes('猜玩家0會選甚麼'));
+ let html=spotlightQuestion(props);assert.ok(html.includes(questions[0].text.replaceAll('你','玩家0')));assert.ok(html.includes('name="choice"'));assert.ok(!html.includes('name="prediction"'));assert.ok(html.includes('提交我的答案'));
+ html=spotlightQuestion({...props,uid:'p1'});assert.ok(html.includes('name="prediction"'));assert.ok(html.includes('你猜 玩家0，他會怎樣選？'));assert.ok(html.indexOf('name="prediction"')<html.indexOf('name="choice"'));
  reveal(r,{p0:{choice:1,prediction:-1},p1:{choice:1,prediction:1}});html=spotlightQuestion({...props,uid:'p1',result:r.public.results[1]});assert.ok(html.includes('你猜中了'));assert.ok(html.includes('再睡五分鐘'));assert.ok(!html.includes('name="prediction"'));assert.ok(!html.includes('未被猜中'));
 });
