@@ -318,3 +318,45 @@ header nav{font-size:13px;gap:20px}
 .display.display-in-room .rank .character img{width:100%;height:100%;left:0;top:0;object-fit:contain}
 .display.display-in-room .rank strong{white-space:nowrap;flex-shrink:0}
 @media(min-width:1000px) and (max-height:850px){.display.display-in-room #game:has(.leaderboard) .question{padding:16px 24px}.display.display-in-room #game:has(.leaderboard) .question h1{font-size:30px;margin:12px 0 16px}.display.display-in-room #game:has(.leaderboard) .timer{font-size:14px;padding:6px 12px}.display.display-in-room #game:has(.leaderboard) .options{gap:12px}.display.display-in-room #game:has(.leaderboard) .option{min-height:60px;font-size:20px;padding:10px 12px 22px}.display.display-in-room #game:has(.leaderboard) .letter{width:30px;height:30px;font-size:18px}.display.display-in-room #game:has(.leaderboard) .result-note{margin-top:10px;font-size:13px}}
+/* Player seats share the broadcast's campfire palette, with touch-sized controls. */
+.viewer.in-room{color:#fff8e8;background:#77563a url('../public/art/island-campfire-wide-1920.png') center / cover fixed}
+.viewer.in-room::before{content:'';position:fixed;inset:0;pointer-events:none;background:linear-gradient(180deg,#171c2240,#171c2273 65%,#211b1320)}
+.viewer.in-room #app{position:relative}
+.viewer.in-room main{max-width:900px}
+.viewer.in-room .viewer-identity{color:#fff8e8;text-shadow:0 2px 6px #211b13}
+.viewer.in-room .player-tabs{background:#232623d9;border:1px solid #fff8e82b;backdrop-filter:blur(14px);padding:5px;border-radius:16px;gap:5px;top:8px}
+.viewer.in-room .player-tabs button{color:#f4e6cd;min-height:46px}
+.viewer.in-room .player-tabs button[aria-pressed=true]{background:#216b54;color:#fffaf0}
+.viewer.in-room .question,.viewer.in-room .panel,.viewer.in-room .spotlight{background:#232623b8;backdrop-filter:blur(14px);border:1px solid #fff8e82b;border-radius:22px;box-shadow:0 14px 40px #151b1820;color:#fff8e8;padding:26px}
+.viewer.in-room .question h1{color:#fffaf0;font-size:clamp(26px,4vw,36px);line-height:1.45;margin:18px 0 26px;text-shadow:0 2px 8px #0003}
+.viewer.in-room .section-title,.viewer.in-room legend{color:#ffe6b2}
+.viewer.in-room legend small,.viewer.in-room .hint,.viewer.in-room summary span,.viewer.in-room #ack,.viewer.in-room .waiting p{color:#e8ddc8}
+.viewer.in-room .timer{background:#fff8e81c;border:1px solid #fff8e830;color:#fff0c8}
+.viewer.in-room .option{color:#233b35;border-width:2px;line-height:1.45}
+.viewer.in-room .option-0{background:#f9e1e9f2}.viewer.in-room .option-1{background:#d9f1e8f2}.viewer.in-room .option-2{background:#fff0bdf2}.viewer.in-room .option-3{background:#deebfbf2}
+.viewer.in-room .option.selected{border-color:#76e0bc;box-shadow:0 0 0 2px #163e37}
+.viewer.in-room .prediction.selected{outline:2px solid #fff0c8;outline-offset:2px}
+.viewer.in-room .option:has(input:focus-visible),.viewer.in-room .prediction:has(input:focus-visible),.viewer.in-room button:focus-visible{outline:3px solid #ffdc8f;outline-offset:4px}
+.viewer.in-room .submit-row button{background:#216b54;border:1px solid #b4d5b961;box-shadow:none;color:#fffaf0}
+.viewer.in-room .submit-row button:hover:not(:disabled){background:#18533f}
+.viewer.in-room .submit-row button:disabled:not(.answer-locked){opacity:.7}
+.viewer.in-room .leaderboard h2,.viewer.in-room .spotlight>p{color:#ffe5ac}
+.viewer.in-room .rank{border-color:#fff8e826;min-height:58px}
+.viewer.in-room .rank>span:first-child,.viewer.in-room .rank strong{color:#ffe5ac}
+.viewer.in-room .rank:first-of-type{background:#ffe4a81c;border-radius:10px}
+.viewer.in-room .rank .character img{width:100%;height:100%;left:0;top:0;object-fit:contain}
+.viewer.in-room .spotlight blockquote,.viewer.in-room .spotlight>b{color:#fff8e8}
+.viewer.in-room .message{border-color:#fff8e826}.viewer.in-room .message b{color:#a9e4cd}
+.viewer.in-room input:not([type=radio]):not([type=checkbox]),.viewer.in-room textarea{background:#fffaf0eb;border-color:#fffaf04d;color:#203e37}
+.viewer.in-room #social .primary{background:#216b54;color:#fffaf0;box-shadow:none}
+.viewer.in-room .chat-entry{background:#232623a3;border:1px solid #fff8e82b;color:#fff0c8;backdrop-filter:blur(12px)}
+.viewer.in-room .chat-entry span{color:#e8ddc8}
+.viewer.in-room .motion-option{color:#fff8e8;background:#232623b8;border-radius:10px;padding:6px 10px}
+.viewer.in-room .island-scroll{background:linear-gradient(0deg,#e1bc8380,transparent)}
+.viewer.in-room .islander-name{color:#203e37;background:#fff8e8e8}
+.viewer.in-room .island-heading h2{background:#252b24b3;color:#fff1cc;border:1px solid #fff8e830;backdrop-filter:blur(8px)}
+.viewer.in-room .voter-dialog{background:#29382ff5;border:1px solid #fff8e840;color:#fff8e8;backdrop-filter:blur(16px)}
+.viewer.in-room .voter-dialog-heading{background:#fff8e80c;border-color:#fff8e826}.viewer.in-room .voter-dialog-heading p,.viewer.in-room .voter-detail small{color:#e8ddc8}
+.viewer.in-room .voter-detail{border-color:#fff8e826}.viewer.in-room .voter-detail-self{color:#a9e4cd}
+@media(min-width:700px){.viewer.in-room .options:not(.revealed){grid-template-columns:1fr 1fr}.viewer.in-room .prediction span{display:block;width:100%;font-size:13px}.viewer.in-room .prediction{padding:12px}}
+@media(max-width:600px){.viewer.in-room{background-position:36% center}.viewer.in-room main{padding-inline:12px}.viewer.in-room .question,.viewer.in-room .panel,.viewer.in-room .spotlight{padding:20px 16px;border-radius:20px}.viewer.in-room .question h1{font-size:26px;margin:16px 0 22px}.viewer.in-room .option{min-height:62px}.viewer.in-room .player-tabs button{font-size:14px}.viewer.in-room .revealed .option{grid-template-columns:30px minmax(0,1fr);padding:12px;gap:8px}.viewer.in-room .vote-summary{grid-column:2;justify-content:flex-start}.viewer.in-room .vote-winner{grid-column:2}}
