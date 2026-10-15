@@ -14,6 +14,7 @@ import {autoRevealReason,ballotMatches,hasConsented} from './auto-reveal.js';
 import {nextRevision,answerEditable,answerHint} from './answer-policy.js';
 import './answer-policy.css';
 import {createQuestionPicker} from './question-picker.js';
+import {createAutomaticQuestionPicker} from './automatic-question-picker.js';
 import {leaderboardPanel} from './leaderboard-view.js';
 import {config} from '../config.js';
 import {pageLink} from './navigation.js';
@@ -158,22 +159,33 @@ function tick(){
  }
 }
 
-function watchPrivate(){privateUnsub();if(!hostReady||!pub?.state)return;const round=pub.state.round;privateRound=round;privateRoom={answers:{},stories:{},moderation:{}};const stops=[];for(const [path,key] of [[`answers/${round}`,'answers'],[`stories/${round}`,'stories'],['moderation','moderation'],['hostOnly/affinity','affinity'],['hostOnly/spotlight','spotlight']])stops.push(api.watch(`room/${path}`,r=>{privateRoom[key]=['moderation','affinity','spotlight'].includes(key)?(r||{}):{[round]:r||{}};renderHost();},e=>notice(friendly(e),true)));privateUnsub=()=>stops.forEach(f=>f());}
+function watchPrivate(){privateUnsub();if(!hostReady||!pub?.state)return;const round=pub.state.round;privateRound=round;privateRoom={answers:{},stories:{},moderation:{}};const stops=[];for(const [path,key] of [[`answers/${round}`,'answers'],[`stories/${round}`,'stories'],['moderation','moderation'],['hostOnly/affinity','affinity'],['hostOnly/spotlight','spotlight'],['hostOnly/questionPlan','questionPlan']])stops.push(api.watch(`room/${path}`,r=>{privateRoom[key]=['moderation','affinity','spotlight','questionPlan'].includes(key)?(r||null):{[round]:r||{}};renderHost();},e=>notice(friendly(e),true)));privateUnsub=()=>stops.forEach(f=>f());}
 function watchOwn(){ownUnsub();modUnsub();if(role!=='viewer'||!api.uid())return;modUnsub=api.watch(`room/moderation/${api.uid()}`,m=>{moderation=m||{};if(m?.removed)notice('你已被移出房間；主持人更新頁面後，可重新加入。',true);render();},()=>{});if(eligible()&&pub?.state?.round)ownUnsub=api.watch(`room/answers/${pub.state.round}/${api.uid()}`,a=>{if(!sending){ownAnswer=a;if(a&&(!targetFirst(pub?.state)||a.attempt===pub.state.attempt)){choice=a.choice;prediction=a.prediction;ack='已恢復儲存的答案';}render();}},()=>{});}
 if(role==='host'){
  const settings=document.createElement('section');settings.id='spotlightSettings';settings.className='spotlight-settings';settings.hidden=true;settings.innerHTML='<h3>輪流猜主角</h3><div class="toolbar"><label>每回合題數<input id="cycleQuestions" type="number" min="1" max="30" value="10"></label><label>場次回合數<input id="cycleCount" type="number" min="1" max="3" value="3"></label><button id="saveSpotlight">套用場次設定</button></div><p id="rotationHint" class="hint"></p>';document.querySelector('.question-picker .section-title').after(settings);
  const scores=document.createElement('section');scores.id='hiddenScores';scores.className='panel';scores.hidden=true;document.querySelector('.host-bottom').before(scores);
- on('saveSpotlight',()=>api.command('configure',{questionsPerCycle:Number($('cycleQuestions').value),cycles:Number($('cycleCount').value)}));
+ const manual=document.createElement('div');manual.id='manualQuestionPicker';$('questionPick').before(manual);manual.append(document.querySelector('label[for="questionPick"]'),$('questionPick'));
+ const automatic=document.createElement('section');automatic.id='automaticQuestionPicker';manual.before(automatic);
+ $('saveSpotlight').textContent='套用並自動抽題';
+ on('saveSpotlight',()=>saveQuestionPlan());
+ for(const id of ['cycleQuestions','cycleCount'])$(id).onchange=()=>act(()=>saveQuestionPlan());
 }
 const questionPicker=role==='host'?createQuestionPicker($('questionPick'),()=>renderHost()):null;
+const automaticPicker=role==='host'?createAutomaticQuestionPicker($('automaticQuestionPicker'),()=>act(()=>saveQuestionPlan())):null;
+let questionPlanBusy=false;
+function questionPlanRequest(){return {category:automaticPicker.category(),questionsPerCycle:Number($('cycleQuestions').value),cycles:Number($('cycleCount').value),expected:{...pub.state}};}
+async function saveQuestionPlan(){if(questionPlanBusy)return;const request=questionPlanRequest();questionPlanBusy=true;renderHost();try{await api.command('prepareQuestions',request);}finally{questionPlanBusy=false;renderHost();}}
 function renderHost(){
  if(!pub?.state)return;const s=pub.state;
  renderAffinity();
  const spotlight=isSpotlight(s);$('spotlightSettings').hidden=!spotlight;$('hiddenScores').hidden=!spotlight;
+ $('manualQuestionPicker').hidden=spotlight;$('automaticQuestionPicker').hidden=!spotlight;
  if(spotlight){
-  questionPicker.sync(pub);
+  automaticPicker.sync(s,privateRoom.questionPlan);
   const version=`${s.code}/${s.questionsPerCycle}/${s.cycles}`;if($('spotlightSettings').dataset.version!==version){$('cycleQuestions').value=s.questionsPerCycle;$('cycleCount').value=s.cycles;$('spotlightSettings').dataset.version=version;}
   for(const id of ['cycleQuestions','cycleCount','saveSpotlight'])$(id).disabled=s.round>0||s.status!=='waiting';
+  $('saveSpotlight').disabled=questionPlanBusy||!['waiting','revealed'].includes(s.status)||s.completed===true||!!privateRoom.questionPlan&&s.round>privateRoom.questionPlan.startRound;
+  for(const id of ['cycleQuestions','cycleCount','automaticCategory'])$(id).disabled ||= questionPlanBusy;
   const next=nextSpotlight({public:pub}).id;
   $('rotationHint').textContent=s.completed?'本場已完成，心水清大師已公布。':`本場 ${s.questionsPerCycle*s.cycles} 題 · 已進行 ${s.status==='thinking'?s.round-1:s.round} 題 · ${s.targetName?'本題主角：'+s.targetName+' · ':''}下一題主角：${pub.members?.[next]?.name||'等待玩家加入'}。主角按入座順序輪換；開場後固定場次設定。`;
   $('hiddenScores').innerHTML='<h2>主角統計 · 主持人明細</h2><p class="hint">每被猜錯 1 人，主角在「被誤會最深排行榜」加 1 分；漏答不計，不影響心水清排行榜。</p>'+Object.entries(pub.members||{}).map(([id,m])=>{const p=privateRoom.spotlight?.players?.[id]||{};return `<div class="hidden-score-row"><b>${esc(m.name)}</b><span>主角 ${p.turns||0} 次</span><span>被猜中 ${p.guessed||0}</span><span>未被猜中 ${p.unguessed||0}</span></div>`;}).join('');
@@ -185,12 +197,13 @@ function renderHost(){
  $('hostGuide').textContent={thinking:`${s.targetName}正在思考，尚未開始計時。主角提交後自動開放大家作答；沒有回答可跳過，不計分也不占題數。請保持主持頁連線。`,waiting:'朋友入座後，選一道暖場題開始。',open:'全員作答或時間到會自動揭曉。按「提前截止」則改為手動揭曉；請保持主持頁開啟。',closed:'你已提前截止本題。準備好後按「揭曉答案」，再開始下一題。',revealed:s.completed?'本場已完成，留點時間分享，再結束房間。':'留點時間聽故事，再選下一題。',ended:'活動已結束；需要保留資料請先匯出，再清理。'}[s.status]||'';
  const waitingForPlayers=spotlight&&['waiting','revealed'].includes(s.status)&&!s.completed&&Object.keys(pub.members||{}).length<2;
  if(waitingForPlayers)$('hostGuide').textContent=`目前 ${Object.keys(pub.members||{}).length} 位入座，至少 2 位才能輪流猜主角。請分享邀請連結；主持人若要參加，也須按「我要一起玩」入座。登入主持頁不會自動算作玩家。${s.locked?'目前已鎖定加入，請先按「重新開放加入」。':''}`;
- else if(spotlight&&s.status==='waiting')$('hostGuide').textContent='人數已足夠。選好題目後，按「請主角先作答」；主角提交後，大家才開始 45 秒作答。';
- $('start').textContent=waitingForPlayers?'等待至少 2 位入座':spotlight?'請主角先作答':'開始這題 · 45 秒';
+ else if(spotlight&&s.status==='waiting')$('hostGuide').textContent='選擇分類及題數後自動抽題。按「開始第一題」請主角先作答；主角提交後，大家才開始 45 秒作答。';
+ if(spotlight&&s.status==='revealed'&&!s.completed)$('hostGuide').textContent='留點時間聽故事，準備好後按「下一題」，系統會依題單請下一位主角作答。';
+ $('start').textContent=questionPlanBusy?'正在儲存題單…':waitingForPlayers?'等待至少 2 位入座':spotlight?(s.completed?'本場已完成':s.round?'下一題':'開始第一題'):'開始這題 · 45 秒';
  $('start').setAttribute('aria-describedby','hostGuide');
  $('lock').textContent=s.locked?'重新開放加入':'鎖定加入';$('toggleChat').textContent=s.chatOpen?'關閉聊天':'開啟聊天';
  $('skipTarget').hidden=!targetFirst(s)||s.status!=='thinking';$('skipTarget').disabled=s.status!=='thinking'||!!privateRoom.answers?.[s.round]?.[s.targetUid];
- $('create').disabled=true;for(const id of ['lock','toggleChat','end'])$(id).disabled=s.status==='ended';$('clean').disabled=s.status!=='ended';$('start').disabled=!questionPicker.selected()||!['waiting','revealed'].includes(s.status)||s.completed===true||(spotlight&&Object.keys(pub.members||{}).length<2);$('reveal').hidden=s.status!=='closed';$('reveal').disabled=s.status!=='closed';$('close').disabled=s.status!=='open';
+ $('create').disabled=true;for(const id of ['lock','toggleChat','end'])$(id).disabled=s.status==='ended';$('clean').disabled=s.status!=='ended';$('start').disabled=questionPlanBusy||(!spotlight&&!questionPicker.selected())||!['waiting','revealed'].includes(s.status)||s.completed===true||(spotlight&&Object.keys(pub.members||{}).length<2);$('reveal').hidden=s.status!=='closed';$('reveal').disabled=s.status!=='closed';$('close').disabled=s.status!=='open';
  const ended=s.status==='ended';
  $('roomLinks').innerHTML=`<span class="host-code-label">${ended?'本場已結束 · 不再接受加入':s.locked?'已暫停接受新朋友':'邀請朋友入座'}</span><b class="host-room-code">${esc(s.code)}</b>${ended?'<p class="hint">這是保留的上一場紀錄。確認不需保留後，清理資料即可建立新房間。</p>':''}<span class="host-links">${!ended?`<a href="${esc(link('index',s.code))}" target="_blank" rel="noopener">我要一起玩 ↗</a>`:''}<a href="${link('display')}" target="_blank" rel="noopener">開啟 OBS 展示 ↗</a></span>`;
  const management=document.querySelector('.room-management');
@@ -227,7 +240,7 @@ try{
  if(role==='host'){hostReady=await api.checkHost().catch(e=>{notice(friendly(e),true);return false;});watchPrivate();}
  api.watch('room/public',p=>{const previous=pub?.state,wasMember=!!pub?.members?.[api.uid()],isMember=!!p?.members?.[api.uid()];pub=p;if(role==='viewer'&&wasMember&&!isMember&&previous?.code===p?.state?.code)notice('你已被主持人移出房間，可以輸入房間碼重新加入。');const changed=p?.state?.round!==previous?.round||p?.state?.code!==previous?.code||p?.state?.attempt!==previous?.attempt;if(p?.state?.code!==previous?.code){unread=0;chatInitialized=false;seenMessages.clear();migrationCode=null;relayed.clear();}if(changed){ownAnswer=null;choice=null;prediction=null;ack='';answerRound=p?.state?.round;}render();if(!p&&$('create'))$('create').disabled=false;if(hostReady&&(privateRound!==p?.state?.round||changed))watchPrivate();if(changed||wasMember!==isMember||(!previous&&p))watchOwn();syncChats();},e=>notice(friendly(e),true));
  on('create',()=>api.create());on('lock',()=>api.command('lock',!pub.state.locked));on('toggleChat',()=>api.command('chatOpen',!pub.state.chatOpen));on('end',async()=>{await api.command('end');notice('房間已結束，紀錄仍保留；需要時可再清理資料。');});on('clean',async()=>{if(confirm('永久清理這個已結束房間的答案、聊天、故事和分數？'))await api.command('clean');});
- on('skipTarget',()=>api.command('skipTarget',{...pub.state}));on('start',()=>{const q=questionPicker.selected();if(!q)throw new Error('請先選擇一道符合篩選的題目。');return api.command('start',q);});for(const action of ['close','reveal'])on(action,()=>api.command(action,{...pub.state}));
+ on('skipTarget',()=>api.command('skipTarget',{...pub.state}));on('start',async()=>{if(isSpotlight(pub.state)){if(questionPlanBusy)return;const request=questionPlanRequest();questionPlanBusy=true;renderHost();try{await api.command('startNext',request);}finally{questionPlanBusy=false;renderHost();}return;}const q=questionPicker.selected();if(!q)throw new Error('請先選擇一道符合篩選的題目。');return api.command('start',q);});for(const action of ['close','reveal'])on(action,()=>api.command(action,{...pub.state}));
  on('logout',async()=>{await api.logout();location.reload();});
  if($('chatForm'))$('chatForm').onsubmit=e=>{e.preventDefault();act(async()=>{const text=$('chatText').value.trim();if(!text)return;await api.chat(text);$('chatText').value='';notice('訊息已送出。');});};
  if($('storyForm'))$('storyForm').onsubmit=e=>{e.preventDefault();act(async()=>{const text=$('storyText').value.trim();if(!text)return;await api.story(pub.state.round,text);notice('故事已交給主持人，尚未公開。');});};

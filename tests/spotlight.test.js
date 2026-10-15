@@ -4,6 +4,58 @@ import {newRoom,startRound,settleRoom,leaderboard,publishRevealedChoices} from '
 import {configureSpotlight,nextSpotlight,awardMasters,activateGuesses,skipTarget} from '../src/spotlight.js';
 import {pairStats} from '../src/affinity.js';
 import {questions} from '../src/questions.js';
+import {prepareQuestionPlan,nextPlannedQuestion,startNextQuestion} from '../src/question-plan.js';
+
+test('automatic category plan persists 30 unique questions and advances once per round',()=>{
+ let r=room(3);
+ prepareQuestionPlan(r,{category:'travel',questionsPerCycle:10,cycles:3},()=>0.37);
+ const plan=structuredClone(r.hostOnly.questionPlan);
+ assert.equal(plan.ids.length,30);assert.equal(new Set(plan.ids).size,30);
+ assert.ok(plan.ids.every(id=>questions.find(q=>q.id===id).category==='travel'));
+ assert.equal(r.public.questionPlan,undefined);
+ prepareQuestionPlan(r,{category:'travel',questionsPerCycle:10,cycles:3});
+ assert.deepEqual(r.hostOnly.questionPlan,plan);
+ for(let i=0;i<30;i++){
+  r=JSON.parse(JSON.stringify(r)); // Reload the saved room, including queue progress.
+  assert.equal(nextPlannedQuestion(r.public.state,r.hostOnly.questionPlan).id,plan.ids[i]);
+  const request={expected:{...r.public.state}};
+  assert.equal(startNextQuestion(r,request,1000),r);
+  assert.equal(r.public.state.question.id,plan.ids[i]);
+  assert.equal(startNextQuestion(r,request,1000),undefined);
+  assert.throws(()=>prepareQuestionPlan(r,{category:'food'}));
+  reveal(r);
+ }
+ assert.equal(r.public.state.completed,true);
+ assert.equal(nextPlannedQuestion(r.public.state,r.hostOnly.questionPlan),undefined);
+ assert.throws(()=>startNextQuestion(r,{expected:{...r.public.state}},1000),/已完成/);
+});
+
+test('plan resizes before opening, resumes existing games and excludes played questions',()=>{
+ const r=room(3);
+ prepareQuestionPlan(r,{category:'food',questionsPerCycle:10,cycles:3});
+ prepareQuestionPlan(r,{category:'routine',questionsPerCycle:2,cycles:2});
+ assert.equal(r.hostOnly.questionPlan.ids.length,4);
+ delete r.hostOnly.questionPlan;
+ r.public.state=startRound(r,questions[0],1000);reveal(r);
+ prepareQuestionPlan(r,{category:'routine'});
+ assert.equal(r.hostOnly.questionPlan.startRound,1);
+ assert.equal(r.hostOnly.questionPlan.ids.length,3);
+ assert.ok(!r.hostOnly.questionPlan.ids.includes(questions[0].id));
+ const request={expected:{...r.public.state}};
+ assert.equal(startNextQuestion(r,{expected:{...request.expected,code:'OTHER'}},1000),undefined);
+ startNextQuestion(r,request,1000);reveal(r);
+ assert.throws(()=>prepareQuestionPlan(r,{category:'food'}),/固定/);
+});
+
+test('plan validates category and lazy first start uses chosen category and settings',()=>{
+ const r=room(3);
+ assert.throws(()=>prepareQuestionPlan(r,{category:'missing'}),/分類/);
+ assert.throws(()=>prepareQuestionPlan(r,{category:'food',questionsPerCycle:31,cycles:3}),/1–30/);
+ const request={category:'food',questionsPerCycle:1,cycles:1,expected:{...r.public.state}};
+ startNextQuestion(r,request,1000);
+ assert.equal(r.hostOnly.questionPlan.ids.length,1);
+ assert.equal(r.public.state.question.category,'food');
+});
 function room(n=10){const r=newRoom('GUESS1');r.public.state.answerFlow='simultaneous-v1';for(let i=0;i<n;i++)r.public.members[`p${i}`]={name:`玩家${i}`,seat:String(i),joined:i+1};return r;}
 function open(r){r.public.state=startRound(r,questions[(r.public.state.round)%questions.length],1000);return r.public.state;}
 function reveal(r,answers={}){r.answers[r.public.state.round]=answers;r.public.state.status='closed';return settleRoom(r,r.public.state.round);}

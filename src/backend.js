@@ -1,4 +1,5 @@
 import {removeRoomMember,allowRemovedMembersToRejoin} from './member-removal.js';
+import {prepareQuestionPlan,startNextQuestion} from './question-plan.js';
 import {isSpotlight,configureSpotlight,awardMasters,targetFirst,activateGuesses,skipTarget} from './spotlight.js';
 import {endRoom} from './end-room.js';
 import {autoRevealRound,sameRound,ballotMatches,hasConsented} from './auto-reveal.js';
@@ -36,6 +37,7 @@ export async function connect(role,onConnection) {
  async chat(text){ready();const uid=api.uid(), seq=(await get(`room/chat/${uid}/seq`)||0)+1;await d.update(ref(`room/chat/${uid}`),{seq,lastSent:d.serverTimestamp(),[`messages/${seq}`]:{text,at:d.serverTimestamp()}});},
  async story(round,text){ready();await d.set(ref(`room/stories/${round}/${api.uid()}`),{text,at:d.serverTimestamp()});},
  async command(action,value){ready();
+ if(action==='prepareQuestions'||action==='startNext'){const result=await d.runTransaction(ref('room'),r=>{if(!r)return null;if(action==='startNext')return startNextQuestion(r,value,api.now());if(r.public.state.code!==value.expected?.code||r.public.state.round!==value.expected?.round)return;return prepareQuestionPlan(r,value);},{applyLocally:false});if(!result.committed)throw Error('房間或題目已變更，請確認目前進度。');return;}
  if(action==='relayEffects'){await d.runTransaction(ref('room'),r=>r?relayEffects(r,value,api.now()):null,{applyLocally:false});return;}
  if(action==='chatEffects'||action==='submitEffects'){await d.update(ref('room'),{[`public/state/${action}`]:value,[`effects/${action==='chatEffects'?'chat':'submissions'}`]:null});return;}
  if(action==='clean'){const r=await d.runTransaction(ref('room'),room=>!room||room.public.state.status==='ended'?null:undefined,{applyLocally:false});if(!r.committed) throw Error('請先結束房間。');return;}
@@ -77,6 +79,7 @@ function demo(role,onConnection){
  async chat(text){const r=read();if(!r?.public.members?.[uid]||r.moderation?.[uid]?.muted||!r.public.state.chatOpen)throw Error('目前無法發言。');r.chat??={};const c=r.chat[uid]??={seq:0,messages:{},lastSent:0};if(Date.now()-c.lastSent<3000||text.length>240)throw Error('請隔三秒再發言，最多 240 字。');c.messages[++c.seq]={text,at:Date.now()};c.lastSent=Date.now();save(r);},
  async story(round,text){const r=read();if(!r?.public.members?.[uid]||r.moderation?.[uid]?.muted||r.public.state.status!=='revealed'||text.length>500)throw Error('現在不能投稿。');r.stories??={};r.stories[round]??={};r.stories[round][uid]={text,at:Date.now()};save(r);},
  async command(action,value){let r=read();if(!r)throw Error('請先建立房間。');const s=r.public.state;
+ if(action==='prepareQuestions'||action==='startNext'){if(s.code!==value.expected?.code||s.round!==value.expected?.round)throw Error('房間或題目已變更，請確認目前進度。');const next=action==='startNext'?startNextQuestion(r,value,Date.now()):prepareQuestionPlan(r,value);if(!next)throw Error('題目已變更，請確認目前進度。');save(next);return;}
  if(action==='autoReveal'){const next=autoRevealRound(r,value,Date.now());if(next)save(next);return;}
  if(action==='relayEffects'){const next=relayEffects(r,value,Date.now());if(next)save(next);return;}
  if(action==='chatEffects'||action==='submitEffects'){s[action]=value;if(r.effects)delete r.effects[action==='chatEffects'?'chat':'submissions'];}

@@ -7,6 +7,7 @@ import {newRoom,startRound,settleRoom} from '../src/game.js';
 import {questions} from '../src/questions.js';
 import {activateGuesses,skipTarget} from '../src/spotlight.js';
 import {endRoom} from '../src/end-room.js';
+import {prepareQuestionPlan,startNextQuestion} from '../src/question-plan.js';
 let env;
 const db=(id,provider='anonymous')=>env.authenticatedContext(id,{firebase:{sign_in_provider:provider}}).database();
 const host=()=>db('host','password');
@@ -17,6 +18,28 @@ const reveal=async(h,round)=>{await update(ref(h,'room/public/state'),{status:'c
 before(async()=>{env=await initializeTestEnvironment({projectId:'demo-spotlight',database:{host:'127.0.0.1',port:9000,rules:readFileSync('database.rules.json','utf8')}});});
 after(async()=>env?.cleanup());
 beforeEach(async()=>{await env.clearDatabase();await env.withSecurityRulesDisabled(c=>set(ref(c.database()),{config:{hostUid:'host'},room:(()=>{const r=newRoom('GUESS1');r.public.state.answerFlow='simultaneous-v1';return r;})()}));});
+
+test('host queue survives transactions and refresh, stays private, and rejects duplicate starts',async()=>{
+ const h=host(),viewer=db('p0'),other=db('p1'),display=env.unauthenticatedContext().database();
+ await join(viewer,'p0',0);await join(other,'p1',1);
+ const prepared=await runTransaction(ref(h,'room'),r=>r?prepareQuestionPlan(r,{category:'travel',questionsPerCycle:10,cycles:3}):null,{applyLocally:false});
+ assert.equal(prepared.committed,true);
+ const plan=prepared.snapshot.val().hostOnly.questionPlan;
+ assert.equal(plan.ids.length,30);assert.equal(new Set(plan.ids).size,30);
+ await assertFails(get(ref(viewer,'room/hostOnly/questionPlan')));
+ await assertFails(get(ref(display,'room/hostOnly/questionPlan')));
+ await assertFails(set(ref(viewer,'room/hostOnly/questionPlan'),plan));
+ const request={expected:prepared.snapshot.val().public.state};
+ const started=await runTransaction(ref(h,'room'),r=>startNextQuestion(r,request,Date.now()),{applyLocally:false});
+ assert.equal(started.snapshot.val().public.state.question.id,plan.ids[0]);
+ assert.deepEqual((await get(ref(host(),'room/hostOnly/questionPlan'))).val(),plan);
+ const duplicate=await runTransaction(ref(h,'room'),r=>startNextQuestion(r,request,Date.now()),{applyLocally:false});
+ assert.equal(duplicate.committed,false);
+ await reveal(h,1);
+ const nextRequest={expected:(await get(ref(h,'room/public/state'))).val()};
+ const next=await runTransaction(ref(h,'room'),r=>startNextQuestion(r,nextRequest,Date.now()),{applyLocally:false});
+ assert.equal(next.snapshot.val().public.state.question.id,plan.ids[1]);
+});
 
 test('ending a room retries an empty host cache, preserves records and is idempotent',async()=>{
  const h=host();
