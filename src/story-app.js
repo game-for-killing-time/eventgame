@@ -7,7 +7,7 @@ let state=read(),draftChoice=null,draftPrediction=null,draftKey='',message='',er
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function read(){try{return JSON.parse(localStorage.getItem(KEY)||'null');}catch{return null;}}
 function savedPack(){try{return E.validatePack(JSON.parse(localStorage.getItem(PACK)||'null'));}catch{return storyPack;}}
-function link(role,id){return `./story.html?demo=1&role=${role}${id?`&player=${encodeURIComponent(id)}`:''}`;}
+function link(role,id){return `./story.html?demo=legacy&role=${role}${id?`&player=${encodeURIComponent(id)}`:''}`;}
 function button(id,text,disabled=false){return `<button id="${id}" ${disabled?'disabled':''}>${text}</button>`;}
 function on(id,fn){document.getElementById(id)?.addEventListener('click',()=>Promise.resolve().then(fn).catch(fail));}
 function fail(e){message=e.message||String(e);error=true;render();}
@@ -90,4 +90,3 @@ function bind(){
 let ticking=false;
 async function tick(){const s=state;if(!s)return;const seconds=Math.max(0,Math.ceil((s.deadline-Date.now())/1000));const active=['routing','open','runoff'].includes(s.phase);document.querySelectorAll('[data-timer]').forEach(e=>e.textContent=active?(seconds?`${seconds} 秒`:'時間到，已鎖定'):({lobby:'等待開場',closed:'已截止',revealed:'已揭曉',ended:'冒險完成','runoff-closed':'決選已截止'}[s.phase]||''));if(active&&!seconds){document.querySelectorAll('fieldset,[data-route],#submit,#runoff-submit').forEach(e=>e.disabled=true);if(role==='host'&&!ticking){ticking=true;try{await mutate(r=>{if(r.round!==s.round||r.phase!==s.phase||r.deadline>Date.now())return;if(r.phase==='routing')E.beginAnswers(r);else E.closeRound(r);});}catch(e){fail(e);}finally{ticking=false;}}}}
 addEventListener('storage',e=>{if(e.key===KEY)render();});setInterval(tick,250);render();
-

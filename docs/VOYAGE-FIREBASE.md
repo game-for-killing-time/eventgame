@@ -1,0 +1,71 @@
+# 12 幕「猜這位朋友」Firebase 發布與試播
+
+## 版本與入口
+
+開始整合時，本機已提交版本、origin/main 與備份分支同為 `6aab299`。整合期間另一項介面工作更新至 `841c740`，GitHub Pages 工作流程已確認成功；本次接續這個版本，保留營火介面變更。
+
+- 玩家：https://game-for-killing-time.github.io/eventgame/story.html
+- 主持：https://game-for-killing-time.github.io/eventgame/story.html?role=host
+- OBS 文字展示：https://game-for-killing-time.github.io/eventgame/story.html?role=display
+- 本機模擬：`story.html?demo=1&role=host`（只有此模式有模擬玩家、自動填答）。
+- 舊 18 幕正式場次：`story.html?legacy=1&role=host`。新版使用 `/voyage`，舊 `/adventure` 與原有 `/room` 資料不會被轉換或刪除。
+
+舊版活動結束後才切換。新故事是新房間，請使用新主持頁複製的新邀請連結。
+
+## Firebase 規則更新（先做，再更新網站）
+
+1. 開啟 GitHub `codex/initial-backup` 分支的 `database.rules.json`，按 **Raw** 複製完整檔案。
+2. Firebase Console → **hoho-event-game** → **Realtime Database → 規則**。
+3. 先備份現有規則，再用完整檔案取代編輯器內容，按 **發布**。
+4. 不用改登入方式、密碼、Web config 或 `/config/hostUid`，也不用升級付費方案。
+5. 完成後重整主持頁，建立新故事房間。不要把 `.read` 或 `.write` 改為全域 `true`。
+
+規則檔：https://github.com/game-for-killing-time/eventgame/blob/codex/initial-backup/database.rules.json
+
+## 資料隔離
+
+| 路徑 | 內容及存取 |
+|---|---|
+| `/voyage/public` | 房間、題目、主角、分數、揭曉文字、粗略角色位置；唯讀公開 |
+| `/voyage/hostOnly` | 完整引擎、歷史、私人默契次數；只限指定正式主持人 |
+| `/voyage/inputs/{routes,first,second}/{round}/{uid}` | 只能寫自己的資料；伺服器 `now`、幕次、階段、選項範圍驗證；他人不可讀 |
+| `/voyage/inbox/{uid}` | 只有本人及主持可讀，包含個人進度與結局卡 |
+| `/voyage/quotes/{round}/{uid}` | 只有當幕已揭曉、本人同意且未被主持隱藏的短答能公開讀取 |
+| `/voyage/quoteConsent`、`hidden` | 公開布林展示開關，不含短答內容；本人只能改自己的同意，主持可隱藏 |
+| `/voyage/sharedCards/{uid}` | 結束後本人同意才可讀；公開卡不附短答，避免繞過短答撤回 |
+| `/voyage/roster`、`seats`、`moderation` | 最多 20 個座位、固定身分及禁言／移除狀態 |
+| `/voyage/chat/{uid}/messages` | 純文字、300 字內、3 秒冷卻；每人只訂閱最後 3 則，畫面最多 40 則；OBS 不載入聊天 |
+
+揭曉在房間層交易中一併發布結果、分數及默契位置。房間 ID、幕次與階段驗證防止過期操作；重試不會重複加分。角色動畫只在裝置上執行。
+
+只有答案相同會累積默契；猜測正確另外得 1 分。共同至少 2 次且相同率達 70%，並符合群內每對都達門檻，才靠攏。兩人都不是主角的輪次不計這一對。選項顏色不代表人格。
+
+## 約 15 分鐘試播
+
+1. 0–3 分：正式主持登入、建立房間、複製連結；至少兩支裝置加入，主持另開玩家頁。
+2. 3–6 分：第一幕提交，讓一人刻意猜錯但自己的答案相同。截止並揭曉，檢查名字、猜中／猜錯與分數。
+3. 6–9 分：帶出小變化，一人填短答並同意，一人不勾。揭曉後確認只有同意的句子出現，再撤回確認消失。
+4. 9–12 分：下一幕五選一，確認主角輪替、E 可提交；自己的答案再次相同後觀察角色靠近。
+5. 12–15 分：重整玩家與主持頁、測聊天禁言、OBS 字體及捲動。結束後下載私人備份，再勾選清理。
+
+完整兩小時帶場：開場 8 分、12 幕各約 8 分、中場 4 分、結局分享 12 分。討論階段沒有倒數。
+
+## 驗證與限制
+
+- 單元測試 30 項：包含舊遊戲、新 12 幕、五選一、漏答、中途加入、默契及重複揭曉。
+- Firebase Emulator 完整回歸 29 項通過（原有 23 項、新版 6 項）：10 個不同 UID、各自獨立 SDK 客戶端走完 12 幕，測同步、覆蓋、同一結果、重連、主角輪替與結局。
+- 權限直接讀寫測試：其他玩家及未登入 OBS 不能讀答案／短答／默契，不能改題目、分數、位置或角色；離線排隊過期提交拒絕。
+- 瀏覽器使用兩個不同來源的獨立匿名身分，實測入座、主角／猜測者提交、短答同意／撤回、主持及玩家重整。
+- 真實手機、OBS 軟體與 2 小時真人活動尚需人工實測；Emulator 不等於十支真實手機。
+- 主持頁需保持開啟，負責派發狀態及結算；關閉期間作答仍受伺服器截止限制，重新開啟會恢復處理。
+- 匿名登入不保證一人一帳號。清除瀏覽器資料或換裝置可能產生新身分。
+- 資料保留到主持清理，沒有自動刪除；私人備份含答案及短答，不應公開上傳。
+- 短答與結局卡撤回會停止後續展示，無法收回已被看見或截圖的內容。
+
+## 免費額度
+
+維持 Firebase Spark，不使用 Cloud Functions 或新增付費服務。Realtime Database Spark 官方列出 100 個同時連線、1 GB 儲存及每月 10 GB 下載；這是專案總額，同時開多個分頁亦會耗用連線。到 Firebase → Realtime Database → **用量**及專案 **用量與帳單**查看。20 人設計不是免費額度保證。
+
+Web config 是公開的用戶端識別設定；服務帳號金鑰、密碼及管理員憑證不可加入 Git。主持權限依正式 Authentication 身分及 `/config/hostUid`，房間碼不是密碼。
+
+官方依據：[交易與讀寫](https://firebase.google.com/docs/database/web/read-and-write)、[規則繼承](https://firebase.google.com/docs/database/security/core-syntax)、[方案額度](https://firebase.google.com/pricing)。
