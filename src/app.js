@@ -109,15 +109,16 @@ function render(){
  if(role==='host'&&hostReady){renderHost();ensureMigration();}
  tick();
 }
-const lockedAnswerLabel='<span class="submit-lock" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M7 10V7a5 5 0 0 1 10 0v3"/><rect x="4" y="10" width="16" height="12" rx="3"/><path d="M12 14v4"/></svg></span><span>作答已鎖定，等待揭曉</span>';
+const lockedAnswerLabel='<span class="submit-lock" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M7 10V7a5 5 0 0 1 10 0v3"/><rect x="4" y="10" width="16" height="12" rx="3"/><path d="M12 14v4"/></svg></span><span>本題已截止，等待主持人揭曉</span>';
 function tick(){
  const s=pub?.state;if(!$('timer')||!s)return;
  const seconds=Math.max(0,Math.ceil((s.deadline-api.now())/1000));
  $('timer').textContent=s.status==='open'?(seconds?`${seconds} 秒`:'時間到，已鎖定作答'):labels[s.status];
+ if(hostReady&&s.status==='open')$('hostGuide').textContent=seconds?`剩餘 ${seconds} 秒，到時自動截止。需要更多時間，請現在按「延長 15 秒」；「鎖定加入」只影響新玩家入座。`:'倒數已結束，正在同步截止狀態；接著按「揭曉答案」，再開始下一題。';
  const locked=s.status==='closed'||(s.status==='open'&&!seconds);
  if(locked){
   document.querySelectorAll('fieldset').forEach(e=>e.disabled=true);
-  const submit=$('submit');if(submit){submit.disabled=true;if(!submit.classList.contains('answer-locked')){submit.classList.add('answer-locked');submit.innerHTML=lockedAnswerLabel;}$('ack').hidden=true;}
+  const submit=$('submit');if(submit){submit.disabled=true;if(!submit.classList.contains('answer-locked')){submit.classList.add('answer-locked');submit.innerHTML=lockedAnswerLabel;}$('ack').hidden=false;$('ack').textContent='等待主持人揭曉並開始下一題後，即可繼續作答。';}
  }
  if(s.status==='open'&&!seconds&&hostReady&&Date.now()-lastAutoClose>5000){lastAutoClose=Date.now();api.command('close',{round:s.round,code:s.code}).catch(()=>{});}
 }
@@ -145,7 +146,7 @@ function renderHost(){
  for(const [id,field,label] of [['toggleChatEffects','chatEffects','聊天彈幕'],['toggleSubmitEffects','submitEffects','交卷彈幕']]){$(id).disabled=s.status==='ended';$(id).textContent=label+'：'+(s[field]===true?'開啟中':'已關閉');$(id).setAttribute('aria-pressed',String(s[field]===true));}
  if(s.submitEffects===true)relayOnce(s.code+'/answers/'+s.round+'/'+JSON.stringify(privateRoom.answers?.[s.round]||{}),{code:s.code,round:s.round,kind:'submissions'});
  $('submitted').textContent=`${Object.keys(privateRoom.answers?.[s.round]||{}).length} / ${Object.keys(pub.members||{}).length} 人已提交`;
- $('hostGuide').textContent={waiting:'朋友入座後，選一道暖場題開始。',open:'作答進行中，可延長或提前截止，不必等所有人。',closed:'作答已鎖定，準備好就揭曉大家的選擇。',revealed:s.completed?'本場已完成，留點時間分享，再結束房間。':'留點時間聽故事，再選下一題。',ended:'活動已結束；需要保留資料請先匯出，再清理。'}[s.status]||'';
+ $('hostGuide').textContent={waiting:'朋友入座後，選一道暖場題開始。',open:'作答進行中，倒數到時會自動截止；需要更多時間，請在截止前按「延長 15 秒」。',closed:'本題已截止（倒數到時會自動截止）。請先按「揭曉答案」，再按「開始這題」開下一題；零人作答也可繼續。',revealed:s.completed?'本場已完成，留點時間分享，再結束房間。':'留點時間聽故事，再選下一題。',ended:'活動已結束；需要保留資料請先匯出，再清理。'}[s.status]||'';
  const waitingForPlayers=spotlight&&['waiting','revealed'].includes(s.status)&&!s.completed&&Object.keys(pub.members||{}).length<2;
  if(waitingForPlayers)$('hostGuide').textContent=`目前 ${Object.keys(pub.members||{}).length} 位入座，至少 2 位才能輪流猜主角。請分享邀請連結；主持人若要參加，也須按「我要一起玩」入座。登入主持頁不會自動算作玩家。${s.locked?'目前已鎖定加入，請先按「重新開放加入」。':''}`;
  else if(spotlight&&s.status==='waiting')$('hostGuide').textContent='人數已足夠。選好題目後，按「開始這題」；所有玩家會自動收到題目。';
