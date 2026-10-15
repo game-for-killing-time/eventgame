@@ -76,3 +76,24 @@
  .display .reveal-popup-card{width:100%}.display .reveal-popup-card .reveal-sentence{font-size:22px}.display .reveal-popup-card .reveal-choice{font-size:30px}
 }
 @media(prefers-reduced-motion:reduce){.reveal-popup-card{animation:none}.spotlight-popup{backdrop-filter:none}}
+
+/* Scroll the contents, not the close control, on small or crowded screens. */
+.spotlight-popup .reveal-popup-card{padding:0;overflow:hidden}
+.reveal-popup-card>[role=status]{padding:28px 32px 22px;max-height:calc(100dvh - 42px);overflow-y:auto;overscroll-behavior:contain}
+@media(max-width:600px){.reveal-popup-card>[role=status]{padding:24px 16px 18px}}
+@media(orientation:landscape) and (max-height:500px){
+ .viewer.in-room header{padding:4px 16px;min-height:0}.viewer.in-room .brand-logo{width:110px;height:52px}
+ .viewer.in-room #viewerStatus{margin:4px 0}.viewer.in-room .player-tabs{top:4px;padding:3px;margin-bottom:8px}.viewer.in-room .player-tabs button{min-height:36px;padding:6px}
+ .viewer.in-room .question.spotlight-question{padding:12px 16px}
+ .viewer.in-room .question.spotlight-question .target-banner{margin:8px 0;padding:6px 10px}
+ .viewer.in-room .target-banner .character{width:32px;height:40px}.viewer.in-room .target-banner h2{font-size:20px}.viewer.in-room .target-banner .spotlight-clock{padding:6px 10px;min-width:90px}.viewer.in-room .spotlight-clock strong{font-size:28px}
+ .viewer.in-room .question.spotlight-question h1{font-size:24px;margin:12px 0}.viewer.in-room .question.spotlight-question fieldset{margin:12px 0}
+ .spotlight-popup{padding:12px}.spotlight-popup .reveal-popup-card{border-radius:22px;max-height:calc(100dvh - 24px)}
+ .reveal-popup-card>[role=status]{display:grid;grid-template-columns:100px minmax(0,1fr);gap:6px 14px;padding:12px 20px;max-height:calc(100dvh - 30px)}
+ .reveal-popup-card .reveal-announcement{grid-column:1/-1;font-size:24px;margin:0 36px 2px;letter-spacing:1px}
+ .reveal-popup-card .reveal-hero{grid-column:1;grid-row:2 / span 2;margin:0;align-self:center;font-size:12px}.reveal-popup-card .reveal-hero>.character{width:64px;height:72px}.reveal-popup-card .reveal-hero b{font-size:16px}
+ .reveal-popup-card .reveal-answer{grid-column:2;padding:8px 12px}.reveal-popup-card .reveal-sentence{font-size:16px;margin-bottom:4px}.reveal-popup-card .reveal-choice{font-size:24px}
+ .reveal-popup-card .reveal-winners{grid-column:2;min-width:0}.reveal-popup-card .reveal-winners h3{font-size:14px;margin:2px 0 4px}.reveal-popup-card .reveal-crew{gap:5px 8px;max-height:100px;overflow-y:auto;overscroll-behavior:contain}
+ .reveal-popup-card .reveal-player{width:52px}.reveal-popup-card .reveal-player .character{width:32px;height:36px}.reveal-popup-card .reveal-player b{font-size:11px}
+ .reveal-popup-card .reveal-popup-hint{grid-column:1/-1;margin:0;font-size:11px}
+}
