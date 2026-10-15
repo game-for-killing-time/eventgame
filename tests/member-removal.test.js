@@ -13,3 +13,5 @@ test('host migration clears old bans without changing membership, locks, mutes o
  const r={public:{state:{code:'PARTY1',locked:true},members:{b:{}},results:{1:{points:{a:1}}}},moderation:{a:{removed:true,muted:true},b:{muted:false}}};
  const p=JSON.stringify(r.public);allowRemovedMembersToRejoin(r);assert.equal(JSON.stringify(r.public),p);assert.deepEqual(r.moderation,{a:{muted:true},b:{muted:false}});allowRemovedMembersToRejoin(r);assert.equal(allowRemovedMembersToRejoin(null),null);
 });
+
+test('an empty transaction cache requests a server retry rather than aborting removal',()=>{assert.equal(removeRoomMember(null,'a','PARTY1'),null);});

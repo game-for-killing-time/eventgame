@@ -1,7 +1,8 @@
 // Removing a member releases their seat, without banning their browser identity.
 // Keep answers and settled scores so rejoining cannot reset answer edit limits.
 export function removeRoomMember(room,uid,expectedCode){
- if(!room||room.public?.state?.code!==expectedCode)return;
+ if(!room)return null; // Let Firebase retry after loading an initially empty cache.
+ if(room.public?.state?.code!==expectedCode)return;
  const seat=room.public.members?.[uid]?.seat;
  if(room.public.members)delete room.public.members[uid];
  if(seat!==undefined&&room.public.seats?.[seat]===uid)delete room.public.seats[seat];
