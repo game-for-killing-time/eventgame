@@ -40,7 +40,7 @@ export function skipTarget(room,expected){
  room.public.rotation={order};s.targetUid=id;s.targetName=room.public.members[id].name;s.attempt++;s.deadline=0;
  return room;
 }
-export function settleSpotlight(room){
+export function settleSpotlight(room,revealedAt=Date.now()){
  const s=room.public.state,round=s.round;
  room.public.results??={};
  if(room.public.results[round]){s.status='revealed';return room;}
@@ -59,7 +59,7 @@ export function settleSpotlight(room){
   }
   stats.rounds[round]=true;affinity.rounds??={};affinity.rounds[round]=true;
  }
- room.public.results[round]={kind:SPOTLIGHT,questionId:s.question.id,targetUid:s.targetUid,targetName:s.targetName,targetAnswered:!!target,...(target?{targetChoice:target.choice}:{}),total:Object.keys(answers).length,counts,winners:[],points,choices};
+ room.public.results[round]={kind:SPOTLIGHT,revealedAt,questionId:s.question.id,targetUid:s.targetUid,targetName:s.targetName,targetAnswered:!!target,...(target?{targetChoice:target.choice}:{}),total:Object.keys(answers).length,counts,winners:[],points,choices};
  room.public.island=islandLayout(members,affinity.pairs,round);s.status='revealed';
  if(round>=s.questionsPerCycle*s.cycles){s.completed=true;s.locked=true;awardMasters(room);}
  return room;

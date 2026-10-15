@@ -19,10 +19,10 @@ export function startRound(room,question,now,duration=45) {
  if(isSpotlight(room.public.state))return startSpotlight(room,question,now,duration);
  const s=room.public.state; return {...s,round:s.round+1,status:'open',question,deadline:now+duration*1000};
 }
-export function settleRoom(room,expectedRound,expectedCode=room?.public?.state?.code) {
+export function settleRoom(room,expectedRound,expectedCode=room?.public?.state?.code,revealedAt=Date.now()) {
  if(!room?.public?.state || room.public.state.round!==expectedRound || room.public.state.code!==expectedCode) return;
  const s=room.public.state;
- if(isSpotlight(s))return ['closed','revealed'].includes(s.status)?settleSpotlight(room):undefined;
+ if(isSpotlight(s))return ['closed','revealed'].includes(s.status)?settleSpotlight(room,revealedAt):undefined;
  if(s.status==='revealed') return publishRevealedChoices(migrateAffinity(room));
  if(s.status!=='closed') return;
  migrateAffinity(room);

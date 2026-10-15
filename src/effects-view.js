@@ -47,7 +47,7 @@ export function createEffects(api,role,container,onError=()=>{}){
   if(pub?.state){const s=pub.state,key=`${s.code}/${s.round}/${s.status}`;
    if(key!==phase){
     clearTimeout(bannerTimer);title.hidden=true;
-    if(phase&&allowed&&!document.hidden){title.textContent=phases[s.status]||'';title.hidden=false;title.classList.remove('party-pop');void title.offsetWidth;title.classList.add('party-pop');bannerTimer=setTimeout(()=>{title.hidden=true;},2800);}
+    if(phase&&allowed&&!document.hidden&&!(s.ruleset==='spotlight-v1'&&s.status==='revealed')){title.textContent=phases[s.status]||'';title.hidden=false;title.classList.remove('party-pop');void title.offsetWidth;title.classList.add('party-pop');bannerTimer=setTimeout(()=>{title.hidden=true;},2800);}
     phase=key;clear();
    }
    for(const el of lanes.children)if(!pub.members?.[el.dataset.uid])el.remove();

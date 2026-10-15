@@ -4,3 +4,75 @@
 .display.display-in-room .question.spotlight-question .target-banner{padding:6px 14px;margin:4px 0;gap:14px;justify-content:center;flex-shrink:0}.display.display-in-room .question.spotlight-question .target-banner .character{width:42px;height:46px}.display.display-in-room .question.spotlight-question .target-banner p{display:none}.display.display-in-room .question.spotlight-question .target-banner h2{display:inline;margin-left:14px;font-size:26px}.display.display-in-room .question.spotlight-question .target-reveal{margin:8px 0}
 
 .thinking-card{padding:24px;text-align:center;border:2px dashed #9bc9ad;border-radius:18px;margin-top:18px}.thinking-card h2{font-size:26px}.thinking-card p{line-height:1.8}
+
+/* Keep the clock beside the player's named target; broadcast gets a central clock. */
+.target-identity{min-width:0;flex:1}.target-identity h2{overflow-wrap:anywhere}
+.display.display-in-room .question.spotlight-question .target-identity h2{color:#18535b;text-shadow:none}
+.display.display-in-room .target-banner .target-identity{flex:0 1 auto}
+.viewer.in-room .target-banner{gap:10px;margin:12px 0 16px;padding:10px 14px}
+.viewer.in-room .target-banner .character{width:48px;height:60px}
+.viewer.in-room .target-banner h2{color:#18535b;text-shadow:none;margin:0;font-size:24px}
+.spotlight-question .spotlight-clock{display:inline-flex;align-items:baseline;justify-content:center;gap:5px;flex-shrink:0;white-space:nowrap;font-variant-numeric:tabular-nums}
+.viewer.in-room .target-banner .spotlight-clock{margin-left:auto;background:#185b50;color:#fff5d8;border:1px solid #fff9db80;border-radius:16px;padding:8px 12px;min-width:96px}
+.spotlight-clock strong{font-size:36px;font-weight:900;line-height:1;letter-spacing:-1px}.spotlight-clock small{font-size:11px}.spotlight-clock>span{font-size:12px}.spotlight-clock .clock-state{font-size:13px}
+.viewer.in-room .target-banner .spotlight-clock[data-urgent=true],.display.display-in-room .spotlight-clock[data-urgent=true]{background:#8c3f38;color:#fff6d6;border-color:#ffd297}
+.spotlight-clock-row{display:flex;justify-content:center;flex-shrink:0;margin:0 0 10px}
+.display.display-in-room .question.spotlight-question .spotlight-clock{border:2px solid #ffe4a8;border-radius:24px;background:#244e45;color:#fff5dc;padding:10px 26px;box-shadow:0 4px 0 #112d27}
+.display.display-in-room .question.spotlight-question .spotlight-clock strong{font-size:54px}.display .spotlight-clock small,.display .spotlight-clock>span{font-size:18px}
+.target-answer-locked{margin:0;padding:12px;text-align:center;border-radius:14px;background:#d9f1e8;color:#185b50;font-weight:800;width:100%;border:1px solid #77bba2}
+.target-answer-locked>span{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:#185b50;color:white;margin-right:6px}
+
+/* One theatrical reveal, then a quiet card for conversation. */
+.spotlight-popup[hidden]{display:none}
+.spotlight-popup{position:fixed;inset:0;z-index:2000;display:grid;place-items:center;padding:18px;background:#142721b8;backdrop-filter:blur(8px);overflow:auto}
+.reveal-popup-card{position:relative;width:min(760px,100%);max-height:calc(100dvh - 36px);overflow-y:auto;padding:28px 32px 22px;border:3px solid #f0ce8f;border-radius:34px 34px 30px 30px;background:#fff9e9;color:#224a40;box-shadow:0 9px 0 #9a7544,0 24px 90px #071d1970;text-align:center;animation:reveal-arrive .55s cubic-bezier(.2,.9,.3,1.15) both,reveal-depart .25s ease-in calc(var(--reveal-life) - 250ms) forwards}
+.reveal-close{position:absolute;right:9px;top:9px;display:grid;place-items:center;width:44px;height:44px;padding:0;min-height:44px;border:0;background:#e9eddb;border-radius:50%;color:#305749;font-size:26px;box-shadow:none;z-index:1}
+.reveal-close:focus-visible{outline:3px solid #14776a;outline-offset:3px}
+.reveal-announcement{margin:0 28px 10px;font-size:clamp(24px,5vw,38px);font-weight:900;color:#23775f;letter-spacing:2px;text-shadow:0 2px 0 #fff,0 4px 0 #d4be80;line-height:1.4}
+.reveal-hero{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;margin:8px 0 14px;font-size:15px}
+.reveal-hero>.character{width:92px;height:100px;background:#f3db9f;border-radius:50%;overflow:visible;display:block}
+.reveal-hero>.character img,.reveal-player .character img{width:100%;height:100%;left:0;top:0;object-fit:contain;clip-path:none}
+.reveal-hero b{font-size:20px;overflow-wrap:anywhere}.reveal-hero>span:last-child{max-width:100%}
+.reveal-answer{padding:16px 20px;background:#fff0c9;border-block:1px dashed #caa566;border-radius:8px;color:#234b40}
+.reveal-sentence{margin:0 0 10px;line-height:1.55;font-size:clamp(18px,3vw,26px);font-weight:700;overflow-wrap:anywhere}
+.reveal-choice{display:block;line-height:1.4;font-size:clamp(26px,4vw,38px);font-weight:900;color:#885025;overflow-wrap:anywhere}
+.reveal-winners h3{font-size:18px;margin:18px 0 10px;text-align:center;color:inherit}
+.reveal-crew{display:flex;flex-wrap:wrap;justify-content:center;gap:10px 14px}
+.reveal-player{display:flex;flex-direction:column;align-items:center;gap:4px;width:70px;min-width:0}
+.reveal-player .character{width:48px;height:54px;flex:none;background:#e7f1e3;border-radius:50%}
+.reveal-player b{font-size:12px;line-height:1.4;max-width:100%;overflow-wrap:anywhere;text-align:center}
+.reveal-popup-hint{font-size:13px;color:#61745d;margin:16px 0 0}
+.spotlight-summary .reveal-waiting-label{text-align:center;background:#fff2d21a;border:1px solid #fff2d24d;border-radius:30px;padding:10px 16px;margin:16px auto;color:#ffe6ac;font-size:16px;font-weight:700}
+.is-reveal-showing .reveal-waiting-label{visibility:hidden}
+.spotlight-summary .reveal-hero{margin-top:18px}.spotlight-summary .reveal-personal{text-align:center;font-size:14px;margin:16px 0 0;color:#fff1c8}
+.display.display-in-room .spotlight-summary .reveal-sentence{font-size:clamp(24px,2.3vw,36px)}
+.display.display-in-room .spotlight-summary .reveal-choice{font-size:clamp(30px,3vw,46px)}
+.display.display-in-room .spotlight-summary .reveal-answer{text-align:center}
+@media(min-width:1000px){
+ .display.display-in-room .question.spotlight-summary{padding:14px 22px}
+ .display.display-in-room .spotlight-summary .reveal-waiting-label{padding:6px 16px;margin:8px auto;font-size:15px;flex-shrink:0}
+ .display.display-in-room .spotlight-summary .reveal-hero{flex-direction:row;gap:12px;margin:6px 0 10px;flex-shrink:0}
+ .display.display-in-room .spotlight-summary .reveal-hero>.character{width:60px;height:66px}
+ .display.display-in-room .spotlight-summary .reveal-answer{padding:10px 16px;flex-shrink:0}
+ .display.display-in-room .spotlight-summary .reveal-sentence{font-size:24px;margin-bottom:4px}
+ .display.display-in-room .spotlight-summary .reveal-choice{font-size:32px}
+ .display.display-in-room .spotlight-summary .reveal-winners h3{font-size:18px;margin:10px 0 6px}
+ .display.display-in-room .spotlight-summary .reveal-crew{gap:6px 10px}
+ .display.display-in-room .spotlight-summary .reveal-player{width:56px}
+ .display.display-in-room .spotlight-summary .reveal-player .character{width:36px;height:40px}
+ .display.display-in-room .spotlight-summary .reveal-player b{font-size:11px}
+}
+.display .reveal-popup-card{width:min(1000px,80vw)}.display .reveal-announcement{font-size:44px}
+.display .reveal-popup-card .reveal-hero>.character{width:106px;height:116px}
+.display .reveal-popup-card .reveal-sentence{font-size:30px}.display .reveal-popup-card .reveal-choice{font-size:44px}
+.display .reveal-winners h3{font-size:22px}.display .reveal-player b{font-size:14px}
+.is-reveal-showing .danmaku-lanes{visibility:hidden}
+@keyframes reveal-arrive{from{opacity:0;transform:translateY(24px) scale(.88) rotate(-2deg)}to{opacity:1;transform:none}}
+@keyframes reveal-depart{to{opacity:0;transform:translateY(-10px) scale(.98)}}
+@media(max-width:600px){
+ .viewer.in-room .question.spotlight-question{padding:18px 16px}.viewer.in-room .target-banner{padding:8px;gap:8px}.viewer.in-room .target-banner .character{width:34px;height:44px}.viewer.in-room .target-banner h2{font-size:20px}.target-identity small{font-size:11px}
+ .viewer.in-room .target-banner .spotlight-clock{min-width:78px;padding:8px;gap:3px;flex-wrap:wrap}.viewer.in-room .target-banner .spotlight-clock small{flex-basis:100%;text-align:center;line-height:1}.spotlight-clock strong{font-size:30px}
+ .reveal-popup-card{padding:24px 16px 18px;border-radius:26px}.reveal-announcement{margin-bottom:8px}.reveal-hero>.character{width:70px;height:78px}.reveal-hero{margin-bottom:10px}.reveal-hero b{font-size:18px}.reveal-answer{padding:12px}.reveal-winners h3{font-size:16px;margin-top:14px}.reveal-crew{gap:8px}.reveal-player{width:52px}.reveal-player .character{width:40px;height:44px}.reveal-player b{font-size:11px}.reveal-popup-hint{margin-top:12px}
+ .display .reveal-popup-card{width:100%}.display .reveal-popup-card .reveal-sentence{font-size:22px}.display .reveal-popup-card .reveal-choice{font-size:30px}
+}
+@media(prefers-reduced-motion:reduce){.reveal-popup-card{animation:none}.spotlight-popup{backdrop-filter:none}}

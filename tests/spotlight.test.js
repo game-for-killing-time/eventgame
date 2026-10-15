@@ -46,6 +46,7 @@ import {voteStack} from '../src/voter-view.js';
 test('Firebase omits empty winners array; revealed voter list still renders',()=>{const markup=voteStack(1,{counts:[0,1,0,0],choices:{a:1}},{a:{name:'甲',seat:'0'}},'a','GUESS1');assert.match(markup,/查看/);assert.ok(!markup.includes('最多人選'));});
 
 import {spotlightQuestion} from '../src/spotlight-view.js';
+import {countdown,revealSummary,revealRemaining,REVEAL_MS} from '../src/spotlight-presentation.js';
 test('player markup has target-only choice form, guesser dual form and real revealed result without private counters',()=>{
  const r=room(2),s=open(r),props={s,pub:r.public,role:'viewer',uid:'p0',joined:true,canAnswer:true,choice:null,prediction:null};
  let html=spotlightQuestion(props);assert.ok(html.includes(questions[0].text.replaceAll('你','玩家0')));assert.ok(html.includes('name="choice"'));assert.ok(!html.includes('name="prediction"'));assert.ok(html.includes('提交我的答案'));
@@ -86,4 +87,36 @@ test('local demo follows target-first submission and skip without filling real p
   await api.command('demoAnswers');await api.command('close');await api.command('reveal');await api.command('start',questions[1]);s=await api.get('room/public/state');
   await api.command('skipTarget',{...s});const next=await api.get('room/public/state');assert.equal(next.round,s.round);assert.notEqual(next.targetUid,s.targetUid);await api.command('demoAnswers');assert.equal((await api.get('room/public/state')).status,'open');
  }finally{for(const [k,v]of Object.entries(old)){if(v===undefined)delete globalThis[k];else globalThis[k]=v;}}
+});
+
+test('target submission has no update button, including restored answers; guessers remain editable before deadline',()=>{
+ const r=room(2),s=open(r),props={s,pub:r.public,role:'viewer',uid:'p0',joined:true,canAnswer:true,choice:1,prediction:-1,ownSubmitted:true,ack:'已提交'};
+ for(const ack of ['已提交','已恢復儲存的答案']){const h=spotlightQuestion({...props,ack});assert.ok(!h.includes('id="submit"'));assert.ok(!h.includes('更新我的答案'));assert.match(h,/<fieldset disabled>/);assert.ok(h.includes('答案已鎖定'));}
+ const h=spotlightQuestion({...props,uid:'p1',prediction:1});assert.match(h,/<button id="submit" class="primary" >提交答案/);assert.ok(!h.includes('先猜玩家0的選擇，再留下自己的答案。'));
+});
+
+test('numeric countdown uses shared clock, handles extension and never goes negative; positions differ by page',()=>{
+ const s={...open(room(2)),deadline:46000};
+ assert.equal(countdown(s,1000).seconds,45);assert.equal(countdown(s,36001).seconds,10);assert.equal(countdown(s,36001).urgent,true);
+ assert.equal(countdown(s,50000).seconds,0);assert.ok(countdown(s,50000).text.includes('截止'));assert.equal(countdown({...s,deadline:61000},40000).seconds,21);
+ assert.equal(countdown({...s,status:'thinking',deadline:0},1000).text,'等待主角');assert.equal(countdown({...s,status:'closed'},1000).seconds,0);
+ const props={s,pub:{members:{}},role:'viewer',uid:'p1',joined:true,now:1000};const player=spotlightQuestion(props),display=spotlightQuestion({...props,role:'display'});
+ assert.ok(player.indexOf('target-banner')<player.indexOf('id="timer"'));assert.ok(display.indexOf('id="timer"')<display.indexOf('target-banner'));assert.ok(player.includes('<strong>45</strong>'));
+});
+
+test('reveal clock is idempotent, expires across clients and reloads, never exposes a pending result',()=>{
+ const r=room(2);open(r);r.answers[1]={p0:{choice:0,prediction:-1},p1:{choice:1,prediction:0}};r.public.state.status='closed';
+ settleRoom(r,1,'GUESS1',1000);assert.equal(r.public.results[1].revealedAt,1000);settleRoom(r,1,'GUESS1',8000);assert.equal(r.public.results[1].revealedAt,1000);
+ assert.equal(revealRemaining(r.public,1000),REVEAL_MS);assert.equal(revealRemaining(JSON.parse(JSON.stringify(r.public)),6000),1000);assert.equal(revealRemaining(r.public,7000),0);
+ for(const status of ['open','thinking','closed','ended'])assert.equal(revealRemaining({...r.public,state:{...r.public.state,status}},2000),0);
+ delete r.public.results[1].revealedAt;assert.equal(revealRemaining(r.public,2000),0);
+});
+
+test('reveal summary shows actual target choice and correct guessers, not everyone choosing same answer; names are escaped',()=>{
+ const r=room(4),s=open(r);s.targetName='<img onerror=x>';r.public.members.p1.name='<script>bad</script>';
+ reveal(r,{p0:{choice:2,prediction:-1},p1:{choice:0,prediction:2},p2:{choice:2,prediction:0},p3:{choice:3,prediction:2}});
+ const result=r.public.results[1],h=revealSummary(s,result,r.public.members);assert.ok(h.includes('共 2 人答對'));assert.ok(h.includes('設了十個鬧鐘'));assert.ok(h.includes('&lt;script&gt;bad&lt;/script&gt;'));assert.ok(!h.includes('<script>'));assert.ok(!h.includes('玩家2'));assert.ok(h.includes('玩家3'));
+ const player=spotlightQuestion({s,result,pub:r.public,role:'viewer',uid:'p1',joined:true});assert.ok(player.includes('等待主持人開始下一題'));assert.ok(!player.includes('class="options'));assert.ok(player.includes('你猜中了'));
+ const missing=revealSummary(s,{...result,targetAnswered:false},r.public.members);assert.ok(missing.includes('共 0 人答對'));assert.ok(missing.includes('沒有有效作答'));
+ s.completed=true;const last=spotlightQuestion({s,result,pub:r.public,role:'display'});assert.ok(last.includes('本場完成'));assert.ok(!last.includes('等待主持人開始下一題'));
 });
