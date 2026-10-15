@@ -1,0 +1,4 @@
+Mode: built-in image generation, transparent background extraction from user attachment.
+Output: public/art/party-logo.png
+
+Extract ONLY the complete wooden title logo at the top of this reference image as a clean transparent PNG cutout. Preserve the original logo design exactly: two stacked sculpted wooden signs, readable traditional Chinese text top '來吧！', bottom '我們互相傷害！', cream yellow lettering with turquoise 互 and orange 傷, teal exclamation mark with yellow dot, small green leaves and yellow accent marks. Preserve the dimensional wood grain, bevels, colors and handcrafted toy rendering. Remove all sky, clouds, village, beach, foliage background, animals and scene. Transparent alpha background, no white rectangle, no added shadow outside the original logo. Crop the canvas closely around the entire logo with small transparent padding, wide landscape approximately 2.1:1, high resolution. This is a faithful background extraction, do not redesign the lettering.
