@@ -21,7 +21,7 @@ export async function startVoyageOnline(role,changed,failed){
  function subscriptions(){
   const next=`${pub?.id||''}/${pub?.round||0}`;
   if(next!==key){key=next;privateStops.forEach(f=>f());privateStops=[];inbox=null;quotes={};cards={};for(const f of sharedStops.values())f();sharedStops.clear();
-   if(role==='player'&&rt.uid&&roster?.game===pub?.id)privateStops.push(api.watch(`voyage/inbox/${rt.uid}`,x=>{inbox=x;state();},fail));
+   if(role==='player'&&rt.uid&&pub&&roster&&roster.game===pub.id)privateStops.push(api.watch(`voyage/inbox/${rt.uid}`,x=>{inbox=x;state();},fail));
   }
   const wanted=new Map();
   if(pub&&['discussion','ended'].includes(pub.phase))for(const [id,c]of Object.entries(quoteConsent[pub.round]||{}))if(c.share&&c.game===pub.id&&pub.players?.[id]&&!hidden[pub.round]?.[id])wanted.set(`q/${id}`,`voyage/quotes/${pub.round}/${id}`);

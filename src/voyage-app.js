@@ -11,7 +11,7 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const link=(r,id)=>`./story.html?${local?'demo=1&':''}role=${r}${local&&id?`&player=${encodeURIComponent(id)}`:!local&&state?`&room=${state.code}`:''}`;
 const btn=(id,text,disabled=false)=>`<button id="${id}" ${disabled||busy?'disabled':''}>${text}</button>`;
 const read=()=>{if(!local)return remote?.state||null;try{return JSON.parse(localStorage.getItem(KEY)||'null');}catch{return null;}};
-const fail=e=>{notice=e.message||String(e);bad=true;render();};
+const fail=e=>{notice=/permission|PERMISSION/i.test(e.message||'')?'讀寫權限被拒絕，請確認房間及 Firebase 規則設定。':e.message||String(e);bad=true;render();};
 async function mutate(fn,msg=''){if(!local)throw Error('正式模式不能使用本機操作');if(busy)return;const expected={id:state?.id,round:state?.round,phase:state?.phase};busy=true;try{await navigator.locks.request(KEY,()=>{const s=read();if(expected.id&&(s?.id!==expected.id||s.round!==expected.round||s.phase!==expected.phase))throw Error('主持已更新階段，請在新畫面再操作。');localStorage.setItem(KEY,JSON.stringify(fn(s)||s));});notice=msg;bad=false;}catch(e){notice=e.message;bad=true;}finally{busy=false;render();}}
 const avatar=p=>`<img class="avatar" src="./art/characters/${p.seat%10}.png" alt="">`;
 function choices(q,name,value,disabled=false){return `<fieldset ${disabled?'disabled':''}><legend>${name==='second'?'小變化後的選擇':'如果是我，我會選擇'}</legend>${q.options.map((o,i)=>`<label class="option color-${i} ${value===i?'selected':''}"><input type="radio" name="${name}" value="${i}" ${value===i?'checked':''}><b>${'ABCDE'[i]}</b><span>${esc(o.text)}</span><i aria-hidden="true">${value===i?'✓':''}</i></label>`).join('')}</fieldset>`;}

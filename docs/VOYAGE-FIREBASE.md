@@ -69,3 +69,11 @@
 Web config 是公開的用戶端識別設定；服務帳號金鑰、密碼及管理員憑證不可加入 Git。主持權限依正式 Authentication 身分及 `/config/hostUid`，房間碼不是密碼。
 
 官方依據：[交易與讀寫](https://firebase.google.com/docs/database/web/read-and-write)、[規則繼承](https://firebase.google.com/docs/database/security/core-syntax)、[方案額度](https://firebase.google.com/pricing)。
+
+## 發布驗收紀錄（2026-10-15）
+
+- 規則已由專案持有人發布；正式 REST 唯讀驗證：`/voyage/public` 回傳 200（尚無房間），`hostOnly`、`inputs`、`inbox`、`quotes`、`sharedCards` 的未授權根路徑請求均回傳 401。
+- GitHub Actions 首次部署 run `38696204700` 成功，包含故事提交 `6c453ea` 及後續介面更新 `d03026b`。
+- 線上主持登入頁、玩家及展示入口可載入；空房間提前訂閱私人收件匣的問題已修正，會在後續部署再次確認。
+- 正式帳號仍需主持自行登入並建立新房間。沒有代填、讀取或重設正式密碼；正式真人整場試播未聲稱完成。
+- 手機版介面截圖：`screenshots/voyage-firebase-390.png`（本機 Firebase Emulator，警示橫幅是 Emulator 專用）；正式主持頁：`screenshots/voyage-live-host.png`。
