@@ -1,0 +1,60 @@
+/* The host shares the players' evening campfire palette and glass surfaces. */
+.host{--host-ink:#fff8e8;--host-muted:#e8ddc8;--host-line:#fff8e82b;--host-surface:#232623e6;--host-green:#216b54;background:#77563a url('../public/art/island-campfire-wide-1920.png') center / cover fixed;color:var(--host-ink)}
+.host::before{content:'';position:fixed;inset:0;background:#171c2273;pointer-events:none}
+.host #app{position:relative}
+.host header,.host footer{background:transparent;border:0}
+.host a{color:#ffe3a0}
+.host .hint,.host .section-title,.host .host-welcome p,.host .host-code-label,.host .question-picker>label,.host .host-mode-switch small{color:var(--host-muted)}
+.host main{max-width:1400px;padding-top:20px}
+.host .host-mode-switch{max-width:1352px;margin:8px auto 0;background:var(--host-surface);border:1px solid var(--host-line);border-radius:16px;color:var(--host-ink);backdrop-filter:blur(12px)}
+.host button,.host .host-mode-switch a{background:#fff8e815;border:1px solid #fff8e840;color:var(--host-ink);box-shadow:none;border-radius:10px}
+.host button:hover:not(:disabled){background:#fff8e82b}
+.host button:disabled{opacity:.45;cursor:not-allowed}
+.host button.primary,.host .host-mode-switch a[aria-current=page]{background:var(--host-green);color:var(--host-ink);border-color:#b4d5b961;box-shadow:none}
+.host button.primary:hover:not(:disabled){background:#18533f}
+.host button.danger{color:#ffc1b4}
+.host input,.host select,.host textarea{background:#fffaf0f2;color:#203e37;border:1px solid #fff8e840;border-radius:10px}
+.host .panel,.host .question,.host .spotlight,.host .empty,.host .entry{background:var(--host-surface);border:1px solid var(--host-line);border-radius:20px;box-shadow:none;backdrop-filter:blur(12px);color:var(--host-ink)}
+.host .panel h2,.host .question h1,.host .host-welcome h1,.host .question-picker h2,.host .host-room-code,.host .entry h1,.host .entry .eyebrow{color:var(--host-ink)}
+.host #controls{padding:0;overflow:hidden;display:grid;grid-template-columns:minmax(260px,.8fr) minmax(0,1.8fr);border:1px solid var(--host-line);border-radius:20px}
+.host .host-welcome{grid-column:1/-1;min-height:0;padding:20px 28px;background:transparent;border-bottom:1px solid var(--host-line)}
+.host .host-welcome h1{font-size:28px}
+.host .host-mascots{height:76px}
+.host .host-mascots .character{width:58px;height:76px}
+.host .host-room{padding:24px 28px;background:#fff8e806;border-right:1px solid var(--host-line);display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:20px}
+.host .host-room-code{font-size:32px}
+.host .host-links{gap:12px}
+.host .room-actions{justify-content:flex-start;gap:8px}
+.host .question-picker{padding:24px 28px;min-width:0}
+.host #submitted{background:#216b5470;color:#e5ffec;border:1px solid var(--host-line);white-space:nowrap}
+.host .question-picker #spotlightSettings{background:transparent;border:0;border-bottom:1px solid var(--host-line);padding:18px 0;margin:0 0 18px}
+.host #spotlightSettings h3{font-size:16px;color:#ffe3a0;margin:0 0 12px}
+.host #spotlightSettings .toolbar{margin:0;display:flex;flex-wrap:wrap;gap:12px;align-items:end}
+.host #spotlightSettings label{font-size:13px;flex:1;min-width:110px;max-width:180px}
+.host #spotlightSettings input{margin-top:6px}
+.host #rotationHint{line-height:1.7;font-size:13px}
+.host #hostGuide{line-height:1.7}
+.host .effect-controls,.host .room-management{grid-column:1/-1;background:transparent;border:0;border-top:1px solid var(--host-line);padding:22px 28px}
+.host .effect-controls h2,.host .room-management h2{font-size:20px;margin:0 0 10px}
+.host .effect-controls .toolbar,.host .room-management .toolbar{margin:16px 0 0}
+.host #reveal{background:#f6d78c;border-color:#d4b369;color:#59401b}
+.host #social .panel,.host #affinityPanel{border:1px solid var(--host-line)}
+.host .empty p,.host .waiting p{color:var(--host-muted)}
+.host .option{color:#203e37}
+.host .story-review p{background:#fff8e80c;color:var(--host-ink)}
+.host .entry form{background:#fff8e80c;border:1px solid var(--host-line);box-shadow:none}
+.host .affinity-row,.host .member,.host .story-review,.host .hidden-score-row{border-color:var(--host-line)}
+.host .affinity-row>span:last-child{color:var(--host-muted)}
+.host .question .timer{color:#ffe3a0}
+.host #controls>.spotlight-settings{background:#fff8e808;border-color:var(--host-line)}
+.host #inviteTools{width:100%;min-width:0}
+@media(max-width:1400px){.host .host-mode-switch{margin-inline:24px}}
+@media(max-width:850px){
+ .host #controls{grid-template-columns:1fr}
+ .host .host-room{border-right:0;border-bottom:1px solid var(--host-line)}
+ .host .host-welcome,.host .host-room,.host .question-picker,.host .effect-controls,.host .room-management{padding:20px}
+ .host .host-mode-switch{margin-inline:12px;padding:12px}
+ .host .host-mode-switch button{flex:1}
+ .host .section-title{flex-wrap:wrap;gap:12px}
+ .host #spotlightSettings .toolbar{gap:10px}
+}

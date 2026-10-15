@@ -1,8 +1,4 @@
-const params=new URLSearchParams(location.search);
-if(params.get('mode')==='voyage'){
- document.getElementById('app').id='story-app';
- await import('./voyage-app.js');
-}else{
- await import('./style.css');
- await import('./app.js');
-}
+// Keep the unfinished adventure unavailable, including older host bookmarks.
+await import('./style.css');
+await import('./host-desk.css');
+await import('./app.js');
