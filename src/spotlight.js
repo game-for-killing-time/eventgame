@@ -1,6 +1,7 @@
 import {islandLayout} from './affinity.js';
 export const SPOTLIGHT='spotlight-v1';
 export const isSpotlight=s=>s?.ruleset===SPOTLIGHT;
+export const targetFirst=s=>isSpotlight(s)&&s.answerFlow==='target-first-v1';
 export function configureSpotlight(room,{questionsPerCycle=10,cycles=3}={}){
  const s=room?.public?.state;
  if(!isSpotlight(s)||s.status!=='waiting'||s.round!==0)throw Error('場次設定只能在第一題開始前修改。');
@@ -20,7 +21,24 @@ export function startSpotlight(room,question,now,duration){
  if(s.round>=total||s.completed)throw Error('本場題目已完成，請結束並清理後開新場。');
  if(orderedMembers(room).length<2)throw Error('至少兩位玩家入座後，才可輪流猜主角。');
  const {id,order}=nextSpotlight(room);room.public.rotation={order};
- return {...s,round:s.round+1,cycle:Math.floor(s.round/s.questionsPerCycle)+1,questionInCycle:s.round%s.questionsPerCycle+1,targetUid:id,targetName:room.public.members[id].name,status:'open',question,deadline:now+duration*1000};
+ const first=s.answerFlow!=='simultaneous-v1';
+ return {...s,answerFlow:first?'target-first-v1':'simultaneous-v1',attempt:(s.attempt||0)+1,round:s.round+1,cycle:Math.floor(s.round/s.questionsPerCycle)+1,questionInCycle:s.round%s.questionsPerCycle+1,targetUid:id,targetName:room.public.members[id].name,status:first?'thinking':'open',question,deadline:first?0:now+duration*1000};
+}
+const sameTurn=(s,e)=>s&&e&&s.code===e.code&&s.round===e.round&&s.attempt===e.attempt&&s.targetUid===e.targetUid;
+export function activateGuesses(room,expected,now){
+ if(!room)return null;
+ const s=room.public.state,a=room.answers?.[s.round]?.[s.targetUid];
+ if(!sameTurn(s,expected)||!targetFirst(s)||s.status!=='thinking'||!a||a.attempt!==s.attempt)return undefined;
+ s.status='open';s.deadline=now+45000;return room;
+}
+export function skipTarget(room,expected){
+ if(!room)return null;
+ const s=room.public.state;
+ if(!sameTurn(s,expected)||!targetFirst(s)||s.status!=='thinking'||room.answers?.[s.round]?.[s.targetUid])return undefined;
+ const {id,order}=nextSpotlight(room);
+ if(!id||id===s.targetUid)throw Error('沒有其他玩家可接棒，請等待朋友加入或結束房間。');
+ room.public.rotation={order};s.targetUid=id;s.targetName=room.public.members[id].name;s.attempt++;s.deadline=0;
+ return room;
 }
 export function settleSpotlight(room){
  const s=room.public.state,round=s.round;

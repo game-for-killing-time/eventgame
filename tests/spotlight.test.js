@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {newRoom,startRound,settleRoom,leaderboard,publishRevealedChoices} from '../src/game.js';
-import {configureSpotlight,nextSpotlight,awardMasters} from '../src/spotlight.js';
+import {configureSpotlight,nextSpotlight,awardMasters,activateGuesses,skipTarget} from '../src/spotlight.js';
 import {pairStats} from '../src/affinity.js';
 import {questions} from '../src/questions.js';
-function room(n=10){const r=newRoom('GUESS1');for(let i=0;i<n;i++)r.public.members[`p${i}`]={name:`玩家${i}`,seat:String(i),joined:i+1};return r;}
+function room(n=10){const r=newRoom('GUESS1');r.public.state.answerFlow='simultaneous-v1';for(let i=0;i<n;i++)r.public.members[`p${i}`]={name:`玩家${i}`,seat:String(i),joined:i+1};return r;}
 function open(r){r.public.state=startRound(r,questions[(r.public.state.round)%questions.length],1000);return r.public.state;}
 function reveal(r,answers={}){r.answers[r.public.state.round]=answers;r.public.state.status='closed';return settleRoom(r,r.public.state.round);}
 test('10 players rotate in seat order for configurable 10 questions x 3 cycles, restore and finish',()=>{
@@ -51,4 +51,39 @@ test('player markup has target-only choice form, guesser dual form and real reve
  let html=spotlightQuestion(props);assert.ok(html.includes(questions[0].text.replaceAll('你','玩家0')));assert.ok(html.includes('name="choice"'));assert.ok(!html.includes('name="prediction"'));assert.ok(html.includes('提交我的答案'));
  html=spotlightQuestion({...props,uid:'p1'});assert.ok(html.includes('name="prediction"'));assert.ok(html.includes('你猜 玩家0，他會怎樣選？'));assert.ok(html.indexOf('name="prediction"')<html.indexOf('name="choice"'));
  reveal(r,{p0:{choice:1,prediction:-1},p1:{choice:1,prediction:1}});html=spotlightQuestion({...props,uid:'p1',result:r.public.results[1]});assert.ok(html.includes('你猜中了'));assert.ok(html.includes('再睡五分鐘'));assert.ok(!html.includes('name="prediction"'));assert.ok(!html.includes('未被猜中'));
+});
+
+
+test('target-first thinking has no deadline; skip changes target without consuming question, score or affinity',()=>{
+ const r=room(3);delete r.public.state.answerFlow;r.public.state=startRound(r,questions[0],1000);
+ const expected={...r.public.state};assert.equal(expected.status,'thinking');assert.equal(expected.deadline,0);assert.equal(expected.round,1);
+ assert.equal(activateGuesses(r,expected,2000),undefined);assert.equal(settleRoom(r,1),undefined);
+ skipTarget(r,expected);assert.equal(r.public.state.targetUid,'p1');assert.equal(r.public.state.round,1);assert.equal(r.public.state.questionInCycle,1);assert.equal(r.public.results,undefined);assert.equal(r.hostOnly,undefined);
+ assert.equal(skipTarget(r,expected),undefined);assert.equal(activateGuesses(r,expected,3000),undefined);
+ const e={...r.public.state};r.answers[1]={[e.targetUid]:{choice:2,prediction:-1,attempt:e.attempt,at:3000}};
+ assert.equal(skipTarget(r,e),undefined);activateGuesses(r,e,5000);assert.equal(r.public.state.deadline,50000);assert.equal(r.public.state.status,'open');
+ assert.equal(activateGuesses(r,e,8000),undefined);assert.equal(r.public.state.deadline,50000);
+});
+
+test('thinking screens hide choices from guessers and display; target sees a single immutable submission',()=>{
+ const r=room(2);delete r.public.state.answerFlow;r.public.state=startRound(r,{...questions[1],options:['直接淋上去','擠旁邊慢慢蘸','我吃原味','我想要其他醬']},1000);const s=r.public.state;
+ const props={s,pub:r.public,role:'viewer',uid:'p1',joined:true,canAnswer:false,choice:null,prediction:null};
+ for(const role of ['viewer','display']){const h=spotlightQuestion({...props,role});assert.ok(h.includes('玩家0正在思考'));assert.ok(!h.includes('name="choice"'));assert.ok(!h.includes('name="prediction"'));}
+ const h=spotlightQuestion({...props,uid:'p0',canAnswer:true});assert.ok(h.includes('name="choice"'));assert.ok(!h.includes('name="prediction"'));assert.ok(h.includes('答案會鎖定'));
+ s.status='open';const locked=spotlightQuestion({...props,uid:'p0',ownSubmitted:true});assert.ok(locked.includes('答案已鎖定'));assert.ok(!locked.includes('更新我的答案'));
+ const guessing=spotlightQuestion({...props,canAnswer:true});assert.ok(guessing.includes('他會吃原味'));assert.ok(!guessing.includes('<span>我吃原味</span></label></div></fieldset><fieldset'));
+});
+
+
+test('local demo follows target-first submission and skip without filling real player answers',async()=>{
+ const old={localStorage:globalThis.localStorage,window:globalThis.window,location:globalThis.location};const store=new Map();
+ globalThis.localStorage={getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,String(v))};globalThis.window={addEventListener(){}};globalThis.location={search:'?demo=1'};
+ try{
+  const {connect}=await import('../src/backend.js');const api=await connect('host',()=>{});await api.create();await api.join('PARTY1','真人');await api.command('demoParticipants');await api.command('start',questions[0]);
+  let s=await api.get('room/public/state');assert.equal(s.status,'thinking');assert.equal(s.targetUid,api.uid());
+  await api.command('demoAnswers');assert.equal(await api.get(`room/answers/${s.round}/${api.uid()}`),null);
+  await api.answer(s.round,1,-1,s.attempt);assert.equal((await api.get('room/public/state')).status,'open');await assert.rejects(api.answer(s.round,2,-1,s.attempt));
+  await api.command('demoAnswers');await api.command('close');await api.command('reveal');await api.command('start',questions[1]);s=await api.get('room/public/state');
+  await api.command('skipTarget',{...s});const next=await api.get('room/public/state');assert.equal(next.round,s.round);assert.notEqual(next.targetUid,s.targetUid);await api.command('demoAnswers');assert.equal((await api.get('room/public/state')).status,'open');
+ }finally{for(const [k,v]of Object.entries(old)){if(v===undefined)delete globalThis[k];else globalThis[k]=v;}}
 });

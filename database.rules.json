@@ -53,7 +53,7 @@
         "$round": {
           "$uid": {
             ".read": "(auth != null && root.child('room/public/members').child(auth.uid).exists() && root.child('room/moderation').child(auth.uid).child('removed').val() !== true) && auth.uid === $uid",
-            ".write": "((auth != null && root.child('room/public/members').child(auth.uid).exists() && root.child('room/moderation').child(auth.uid).child('removed').val() !== true) && auth.uid === $uid) && newData.exists() && $round === '' + root.child('room/public/state').child('round').val() && root.child('room/public/state').child('status').val() === 'open' && now < root.child('room/public/state').child('deadline').val()",
+            ".write": "((auth != null && root.child('room/public/members').child(auth.uid).exists() && root.child('room/moderation').child(auth.uid).child('removed').val() !== true) && auth.uid === $uid) && newData.exists() && $round === '' + root.child('room/public/state').child('round').val() && ((root.child('room/public/state').child('answerFlow').val() === 'target-first-v1') ? (newData.child('attempt').val() === root.child('room/public/state').child('attempt').val() && ((root.child('room/public/state').child('ruleset').val() === 'spotlight-v1' && root.child('room/public/state').child('targetUid').val() === auth.uid) ? (root.child('room/public/state').child('status').val() === 'thinking' && !data.exists()) : (root.child('room/public/state').child('status').val() === 'open' && now < root.child('room/public/state').child('deadline').val()))) : (root.child('room/public/state').child('status').val() === 'open' && now < root.child('room/public/state').child('deadline').val()))",
             ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.hasChildren(['choice','prediction','at']))",
             "choice": {
               ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.isNumber() && newData.val() % 1 === 0 && newData.val() >= 0 && newData.val() < 4)"
@@ -66,6 +66,9 @@
             },
             "$other": {
               ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (false)"
+            },
+            "attempt": {
+              ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.isNumber() && newData.val() === root.child('room/public/state').child('attempt').val())"
             }
           }
         }

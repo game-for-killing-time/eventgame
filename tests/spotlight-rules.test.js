@@ -5,6 +5,7 @@ import {initializeTestEnvironment,assertFails,assertSucceeds} from '@firebase/ru
 import {ref,set,get,update,serverTimestamp,runTransaction,onValue,goOffline,goOnline} from 'firebase/database';
 import {newRoom,startRound,settleRoom} from '../src/game.js';
 import {questions} from '../src/questions.js';
+import {activateGuesses,skipTarget} from '../src/spotlight.js';
 import {endRoom} from '../src/end-room.js';
 let env;
 const db=(id,provider='anonymous')=>env.authenticatedContext(id,{firebase:{sign_in_provider:provider}}).database();
@@ -15,7 +16,7 @@ const start=async(h,q=questions[0])=>runTransaction(ref(h,'room'),r=>{if(!r)retu
 const reveal=async(h,round)=>{await update(ref(h,'room/public/state'),{status:'closed'});return runTransaction(ref(h,'room'),r=>r?settleRoom(r,round,'GUESS1'):null,{applyLocally:false});};
 before(async()=>{env=await initializeTestEnvironment({projectId:'demo-spotlight',database:{host:'127.0.0.1',port:9000,rules:readFileSync('database.rules.json','utf8')}});});
 after(async()=>env?.cleanup());
-beforeEach(async()=>{await env.clearDatabase();await env.withSecurityRulesDisabled(c=>set(ref(c.database()),{config:{hostUid:'host'},room:newRoom('GUESS1')}));});
+beforeEach(async()=>{await env.clearDatabase();await env.withSecurityRulesDisabled(c=>set(ref(c.database()),{config:{hostUid:'host'},room:(()=>{const r=newRoom('GUESS1');r.public.state.answerFlow='simultaneous-v1';return r;})()}));});
 
 test('ending a room retries an empty host cache, preserves records and is idempotent',async()=>{
  const h=host();
@@ -61,4 +62,45 @@ test('deadline, queued offline writes, stale rounds and removed members are reje
  goOffline(b);const queued=submit(b,'b',1,0,1);const denied=assertFails(queued);await update(ref(h,'room/public/state'),{deadline:Date.now()-1000});goOnline(b);await denied;assert.equal((await get(ref(b,'room/answers/1/b'))).val().choice,2);
  await assertFails(submit(a,'a',1,0,-1));await reveal(h,1);await start(h);await assertFails(submit(b,'b',1,2,1));
  await update(ref(h,'room'),{'moderation/b/removed':true,'public/members/b':null,'public/seats/1':null});await assertFails(submit(b,'b',2,2,-1));
+});
+
+
+test('target-first rules lock target, reject early guesses and stale skipped writes, then synchronize 10 clients',async()=>{
+ const h=host();await set(ref(h,'room/public/state/answerFlow'),'target-first-v1');
+ const clients=Array.from({length:10},(_,i)=>({id:`f${i}`,db:db(`f${i}`)}));for(let i=0;i<10;i++)await join(clients[i].db,clients[i].id,i);
+ const display=env.unauthenticatedContext().database();
+ await start(h);const first=(await get(ref(h,'room/public/state'))).val();assert.equal(first.status,'thinking');assert.equal(first.deadline,0);
+ const answer=(c,s,choice,prediction)=>set(ref(c.db,`room/answers/${s.round}/${c.id}`),{choice,prediction,attempt:s.attempt,at:serverTimestamp()});
+ await assertFails(answer(clients[1],first,1,1));await assertFails(update(ref(clients[1].db,'room/public/state'),{status:'open',deadline:Date.now()+45000}));
+ const skipped=await runTransaction(ref(h,'room'),r=>skipTarget(r,first),{applyLocally:false});assert.equal(skipped.committed,true);const s=skipped.snapshot.val().public.state;assert.equal(s.round,1);assert.equal(s.targetUid,'f1');assert.equal(skipped.snapshot.val().public.results,undefined);
+ await assertFails(answer(clients[0],first,1,-1));await assertFails(answer(clients[1],first,1,-1));
+ await assertSucceeds(answer(clients[1],s,1,-1));await assertFails(answer(clients[1],s,2,-1));await assertFails(set(ref(clients[1].db,'room/answers/1/f1'),null));
+ const skipAfterAnswer=await runTransaction(ref(h,'room'),r=>skipTarget(r,s),{applyLocally:false});assert.equal(skipAfterAnswer.committed,false);
+ for(const c of [clients[0].db,display])await assertFails(get(ref(c,'room/answers/1/f1')));
+ const opened=await runTransaction(ref(h,'room'),r=>activateGuesses(r,s,Date.now()),{applyLocally:false});assert.equal(opened.committed,true);const deadline=opened.snapshot.val().public.state.deadline;assert.ok(deadline>Date.now()+40000);
+ const retry=await runTransaction(ref(h,'room'),r=>activateGuesses(r,s,Date.now()),{applyLocally:false});assert.equal(retry.committed,false);assert.equal((await get(ref(h,'room/public/state/deadline'))).val(),deadline);
+ await assertFails(answer(clients[1],s,2,-1));await Promise.all(clients.filter(c=>c.id!=='f1').map(c=>answer(c,s,2,1)));
+ await reveal(h,1);const result=(await get(ref(h,'room/public/results/1'))).val();assert.equal(result.targetChoice,1);assert.equal(result.points.f1,0);assert.equal(Object.values(result.points).reduce((a,b)=>a+b,0),9);
+ for(const c of clients)assert.deepEqual((await get(ref(c.db,'room/public/results/1'))).val(),result);
+ await start(h);const next=(await get(ref(h,'room/public/state'))).val();assert.equal(next.round,2);assert.equal(next.targetUid,'f2');assert.equal(next.status,'thinking');
+ await assertFails(answer(clients[1],s,1,-1));
+});
+
+
+test('target-first skip versus submission is atomic; stale offline target cannot answer after being skipped',async()=>{
+ const h=host(),a=db('a'),b=db('b');await set(ref(h,'room/public/state/answerFlow'),'target-first-v1');await join(a,'a',0);await join(b,'b',1);await start(h);
+ const s=(await get(ref(h,'room/public/state'))).val();
+ // Cache the target's permitted own path before going offline, then queue a submission.
+ await get(ref(a,'room/answers/1/a'));goOffline(a);
+ const queued=set(ref(a,'room/answers/1/a'),{choice:0,prediction:-1,attempt:s.attempt,at:serverTimestamp()});const rejected=assertFails(queued);
+ const skipped=await runTransaction(ref(h,'room'),r=>skipTarget(r,s),{applyLocally:false});assert.equal(skipped.committed,true);goOnline(a);await rejected;
+ const next=(await get(ref(h,'room/public/state'))).val();assert.equal(next.targetUid,'b');assert.equal(next.round,1);
+ const outcomes=await Promise.allSettled([
+  set(ref(b,'room/answers/1/b'),{choice:2,prediction:-1,attempt:next.attempt,at:serverTimestamp()}),
+  runTransaction(ref(h,'room'),r=>skipTarget(r,next),{applyLocally:false})
+ ]);
+ const room=(await get(ref(h,'room'))).val();
+ if(room.answers?.[1]?.b){assert.equal(outcomes[0].status,'fulfilled');assert.equal(room.public.state.targetUid,'b');assert.equal(outcomes[1].value.committed,false);}
+ else{assert.equal(outcomes[0].status,'rejected');assert.equal(outcomes[1].value.committed,true);assert.equal(room.public.state.targetUid,'a');}
+ assert.equal(room.public.state.round,1);assert.equal(room.public.results,undefined);
 });

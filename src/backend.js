@@ -1,4 +1,4 @@
-import {isSpotlight,configureSpotlight,awardMasters} from './spotlight.js';
+import {isSpotlight,configureSpotlight,awardMasters,targetFirst,activateGuesses,skipTarget} from './spotlight.js';
 import {endRoom} from './end-room.js';
 import {migrateAffinity} from './affinity.js';
 import {relayEffects} from './effects.js';
@@ -28,7 +28,7 @@ export async function connect(role,onConnection) {
  get,
  async create(){ready();const result=await d.runTransaction(ref('room'),room=>room?undefined:newRoom(makeCode()),{applyLocally:false});if(!result.committed) throw Error('已有房間；請結束並清理後再建立。');},
  async join(code,name){ready();await api.guest();for(let attempt=0;attempt<20;attempt++){const p=await get('room/public');if(!p||p.state.code!==code)throw Error('房間碼不正確。');if(p.members?.[api.uid()])return;if(p.state.locked||p.state.status==='ended')throw Error('房間已鎖定或結束。');const seat=Array.from({length:20},(_,i)=>String(i)).find(i=>!p.seats?.[i]);if(seat===undefined)throw Error('房間已滿 20 人。');try{await d.update(ref('room/public'),{[`members/${api.uid()}`]:{name,code,seat,joined:d.serverTimestamp()},[`seats/${seat}`]:api.uid()});return;}catch(e){if((await get(`room/moderation/${api.uid()}`))?.removed||attempt===19)throw e;}}},
- async answer(round,choice,prediction){ready();await d.set(ref(`room/answers/${round}/${api.uid()}`),{choice,prediction,at:d.serverTimestamp()});},
+ async answer(round,choice,prediction,attempt){ready();await d.set(ref(`room/answers/${round}/${api.uid()}`),{choice,prediction,...(attempt!==undefined?{attempt}:{}),at:d.serverTimestamp()});},
  async chat(text){ready();const uid=api.uid(), seq=(await get(`room/chat/${uid}/seq`)||0)+1;await d.update(ref(`room/chat/${uid}`),{seq,lastSent:d.serverTimestamp(),[`messages/${seq}`]:{text,at:d.serverTimestamp()}});},
  async story(round,text){ready();await d.set(ref(`room/stories/${round}/${api.uid()}`),{text,at:d.serverTimestamp()});},
  async command(action,value){ready();
@@ -38,6 +38,7 @@ export async function connect(role,onConnection) {
  if(action==='migrate'){const expected=await get('room/public/state');if(!expected)return;await d.runTransaction(ref('room'),r=>!r?null:r.public.state.code===expected.code?publishRevealedChoices(migrateAffinity(r)):undefined,{applyLocally:false});return;}
  if(action==='reveal'){const expected=await get('room/public/state');const r=await d.runTransaction(ref('room'),room=>room?settleRoom(room,expected.round,expected.code):null,{applyLocally:false});if(!r.committed)throw Error('這輪狀態已改變，請重新確認。');return;}
  if(action==='configure'){const result=await d.runTransaction(ref('room'),r=>r?configureSpotlight(r,value):null,{applyLocally:false});if(!result.committed)throw Error('請先建立房間。');return;}
+ if(action==='openGuesses'||action==='skipTarget'){const expected=value||await get('room/public/state');const result=await d.runTransaction(ref('room'),r=>action==='openGuesses'?activateGuesses(r,expected,api.now()):skipTarget(r,expected),{applyLocally:false});if(action==='skipTarget'&&!result.committed)throw Error('主角已提交或題目已變更，不能跳過。');return;}
  if(action==='start'){const expected=await get('room/public/state');const result=await d.runTransaction(ref('room'),r=>{if(!r)return null;if(r.public.state.code!==expected?.code||r.public.state.round!==expected.round)return; r.public.state=startRound(r,value,api.now());delete r.public.story;return r;},{applyLocally:false});if(!result.committed)throw Error('房間已變更，請確認目前題目。');return;}
  if(action==='close'||action==='extend'){const expected=value||await get('room/public/state');await d.runTransaction(ref('room/public/state'),s=>{if(!s)return null;if(s.code!==expected.code||s.round!==expected.round||s.status!=='open'||(action==='extend'&&s.deadline<=api.now())) return;return {...s,...(action==='close'?{status:'closed'}:{deadline:s.deadline+15000})};},{applyLocally:false});return;}
  if(action==='end'){const expected=await get('room/public/state');if(!expected)throw Error('目前沒有房間可結束。');const result=await d.runTransaction(ref('room'),r=>endRoom(r,expected.code),{applyLocally:false});if(!result.committed||result.snapshot.val()?.public?.state?.status!=='ended')throw Error('房間已變更，請重新確認後再結束。');return;}
@@ -66,7 +67,7 @@ function demo(role,onConnection){
  watchChat(id,fn){return api.watch(`room/chat/${id}/messages`,m=>fn(Object.fromEntries(Object.entries(m||{}).slice(-3))));},
  async create(){if(read()) throw Error('請先結束並清理目前房間。');save(newRoom('PARTY1'));},
  async join(code,name){const r=read();if(code!=='PARTY1')throw Error('目前是本機模擬模式，無法加入 Firebase 房間。請開啟主持頁提供的觀眾網址，移除 demo=1 並重新整理。');if(!r||r.public.state.code!==code)throw Error('模擬房間尚未建立。請在模擬主持頁建立 PARTY1 房間。');if(r.moderation?.[uid]?.removed)throw Error('你已被移出房間。');if(r.public.members?.[uid])return;if(r.public.state.locked||r.public.state.status==='ended'||Object.keys(r.public.members||{}).length>=20)throw Error('房間已鎖定或額滿。');r.public.members??={};r.public.members[uid]={name,code,seat:String(Array.from({length:20},(_,i)=>i).find(i=>!Object.values(r.public.members).some(m=>Number(m.seat)===i))),joined:Date.now()};save(r);},
- async answer(round,choice,prediction){const r=read(),s=r?.public.state;if(!r?.public.members?.[uid]||s.status!=='open'||s.round!==round||Date.now()>=s.deadline)throw Error('本題已截止，答案未提交。');if(!Number.isInteger(choice)||choice<0||choice>3||!Number.isInteger(prediction)||(isSpotlight(s)&&s.targetUid===uid?prediction!==-1:prediction<0||prediction>3))throw Error('請完成本題選擇。');r.answers??={};r.answers[round]??={};r.answers[round][uid]={choice,prediction,at:Date.now()};save(r);},
+ async answer(round,choice,prediction,attempt){const r=read(),s=r?.public.state;const first=targetFirst(s),target=s?.targetUid===uid,allowed=first&&target?s.status==='thinking'&&!r.answers?.[round]?.[uid]:s?.status==='open'&&Date.now()<s.deadline;if(!r?.public.members?.[uid]||!allowed||s.round!==round||(first&&attempt!==s.attempt))throw Error('本題已截止，答案未提交。');if(!Number.isInteger(choice)||choice<0||choice>3||!Number.isInteger(prediction)||(isSpotlight(s)&&s.targetUid===uid?prediction!==-1:prediction<0||prediction>3))throw Error('請完成本題選擇。');r.answers??={};r.answers[round]??={};r.answers[round][uid]={choice,prediction,...(attempt!==undefined?{attempt}:{}),at:Date.now()};if(first&&target)activateGuesses(r,s,Date.now());save(r);},
  async chat(text){const r=read();if(!r?.public.members?.[uid]||r.moderation?.[uid]?.muted||!r.public.state.chatOpen)throw Error('目前無法發言。');r.chat??={};const c=r.chat[uid]??={seq:0,messages:{},lastSent:0};if(Date.now()-c.lastSent<3000||text.length>240)throw Error('請隔三秒再發言，最多 240 字。');c.messages[++c.seq]={text,at:Date.now()};c.lastSent=Date.now();save(r);},
  async story(round,text){const r=read();if(!r?.public.members?.[uid]||r.moderation?.[uid]?.muted||r.public.state.status!=='revealed'||text.length>500)throw Error('現在不能投稿。');r.stories??={};r.stories[round]??={};r.stories[round][uid]={text,at:Date.now()};save(r);},
  async command(action,value){let r=read();if(!r)throw Error('請先建立房間。');const s=r.public.state;
@@ -77,9 +78,12 @@ function demo(role,onConnection){
   for(let i=0;i<3;i++){const id=`demo-friend-${i}`;if(r.public.members[id])continue;const seat=Array.from({length:20},(_,n)=>n).find(n=>!Object.values(r.public.members).some(m=>Number(m.seat)===n));if(seat===undefined)break;r.public.members[id]={name:['示範小美','示範阿樂','示範琪琪'][i],code:s.code,seat:String(seat),joined:Date.now()+i,demo:true};}
  }
  if(action==='demoAnswers'){
-  if(s.status!=='open'||Date.now()>=s.deadline)throw Error('請先開始一題，截止前才可補示範答案。');r.answers??={};const answers=r.answers[s.round]??={};
-  for(const [id,m] of Object.entries(r.public.members||{}))if(m.demo&&!answers[id])answers[id]={choice:(s.round+Number(m.seat))%4,prediction:id===s.targetUid?-1:0,at:Date.now()};
+  if(!['thinking','open'].includes(s.status)||(s.status==='open'&&Date.now()>=s.deadline))throw Error('請先開始一題，截止前才可補示範答案。');r.answers??={};const answers=r.answers[s.round]??={};
+  for(const [id,m] of Object.entries(r.public.members||{}))if(m.demo&&!answers[id]&&(s.status!=='thinking'||id===s.targetUid))answers[id]={choice:(s.round+Number(m.seat))%4,prediction:id===s.targetUid?-1:0,...(targetFirst(s)?{attempt:s.attempt}:{}),at:Date.now()};
+  if(s.status==='thinking')activateGuesses(r,s,Date.now());
  }
+ if(action==='openGuesses'){const next=activateGuesses(r,value||s,Date.now());if(next)save(next);return;}
+ if(action==='skipTarget'){const next=skipTarget(r,value||s);if(!next)throw Error('主角已提交或題目已變更，不能跳過。');save(next);return;}
  if(action==='configure')configureSpotlight(r,value);
  if(action==='start'){r.public.state=startRound(r,value,Date.now());delete r.public.story;}
  if(action==='close'&&s.status==='open')s.status='closed';

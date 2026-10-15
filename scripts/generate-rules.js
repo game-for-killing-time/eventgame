@@ -21,6 +21,11 @@ rules.rules.room.hostOnly={'.read':host,'.write':host};
 const targetRule=`${state}.child('ruleset').val() === 'spotlight-v1' && ${state}.child('targetUid').val() === auth.uid`;
 rules.rules.room.answers.$round.$uid.prediction['.validate']=`newData.isNumber() && newData.val() % 1 === 0 && ((${targetRule}) ? newData.val() === -1 : (newData.val() >= 0 && newData.val() < 4))`;
 
+const firstRule=`${state}.child('answerFlow').val() === 'target-first-v1'`;
+const answer=rules.rules.room.answers.$round.$uid;
+answer['.write']=`(${own}) && newData.exists() && $round === '' + ${state}.child('round').val() && ((${firstRule}) ? (newData.child('attempt').val() === ${state}.child('attempt').val() && ((${targetRule}) ? (${state}.child('status').val() === 'thinking' && !data.exists()) : (${state}.child('status').val() === 'open' && now < ${state}.child('deadline').val()))) : (${state}.child('status').val() === 'open' && now < ${state}.child('deadline').val()))`;
+answer.attempt={'.validate':`newData.isNumber() && newData.val() === ${state}.child('attempt').val()`};
+
 rules.rules.room.public.island={'.write':host};
 rules.rules.room.effects={
  chat:{'.read':`${state}.child('chatEffects').val() === true && ${state}.child('chatOpen').val() === true && ${state}.child('status').val() !== 'ended'`,'.write':host},

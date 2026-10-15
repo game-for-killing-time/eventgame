@@ -1,5 +1,5 @@
 import {characterId,characterMarkup} from './characters.js';
-const phases={waiting:'準備開題！',open:'選好就交卷！',closed:'時間到！',revealed:'答案揭曉！',ended:'今晚謝謝大家！'};
+const phases={waiting:'準備開題！',thinking:'主角先想一想！',open:'選好就交卷！',closed:'時間到！',revealed:'答案揭曉！',ended:'今晚謝謝大家！'};
 export function createEffects(api,role,container,onError=()=>{}){
  container.innerHTML='<div class="party-title" role="status" hidden></div><div class="danmaku-lanes" aria-hidden="true"></div>';
  const title=container.querySelector('.party-title'),lanes=container.querySelector('.danmaku-lanes');
