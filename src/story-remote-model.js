@@ -4,7 +4,7 @@ import * as E from './story-engine.js';
 export function fingerprint(value){function normalize(v){if(v===null||v===undefined)return null;if(typeof v!=='object')return v;const out={};for(const k of Object.keys(v).sort()){const x=normalize(v[k]);if(x!==null)out[k]=x;}return Object.keys(out).length?out:null;}return JSON.stringify(normalize(value));}
 export function hydrate(r){
  if(!r?.hostOnly)return r;const s=r.hostOnly;s.players??={};s.routes??={};s.answers??={};s.results??={};s.history??=[];s.runoffVotes??={};s.shared??={};s.chat??=[];
- for(const p of Object.values(s.players)){p.flags??=[];p.events??=[];}
+ for(const p of Object.values(s.players)){p.flags??=[];p.events??=[];for(const e of p.events)e.companions??=[];}
  r.roster??={};r.inputs??={};r.moderation??={};return r;
 }
 export function createAdventure(code,now=Date.now(),pack){const s=E.newStory(pack??undefined,now);s.id=crypto.randomUUID();return project({hostOnly:s,code,locked:false,chatOpen:true,roster:{},inputs:{},moderation:{}});}
@@ -47,4 +47,5 @@ export function remoteCommand(r,action,value,expected,now=Date.now()){
  else if(action!=='sync')throw Error('未知操作');
  return project(r);
 }
+
 
