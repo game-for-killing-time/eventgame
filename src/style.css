@@ -250,3 +250,71 @@ header nav{font-size:13px;gap:20px}
 .viewer.in-room header{padding:10px 16px 0}
 @media(max-width:650px){.viewer:not(.in-room){background-position:36% center}.viewer:not(.in-room)::before{background:#211b1338}.viewer:not(.in-room) header{padding:22px 22px 8px}.viewer:not(.in-room) .brand-logo{width:138px;height:66px}.viewer:not(.in-room) main{padding:18px 20px 32px}.viewer #entry{justify-content:center;align-items:center}.viewer #entry #joinForm{padding:28px 24px;background:#241b168c}.viewer #joinForm .join-title{font-size:32px}.viewer:not(.in-room) #notice{align-self:center}}
 @media(max-height:600px){.viewer:not(.in-room) header{padding-top:12px}.viewer:not(.in-room) main{padding-top:8px;padding-bottom:20px}.viewer #entry #joinForm{padding:24px}.viewer #joinForm .join-intro{margin-bottom:16px}}
+/* Broadcast play scene: readable question stage over the same evening island. */
+.display.display-in-room{background:#77563a url('../public/art/island-campfire-wide-1920.png') center / cover fixed;color:#fff8e8}
+.display.display-in-room::before{content:'';position:fixed;inset:0;background:linear-gradient(180deg,#171c2240,#171c2273 65%,#211b1320);pointer-events:none}
+.display.display-in-room #app{position:relative}
+.display.display-in-room main{padding:12px 4vw 16px}
+.display.display-in-room .room-line{background:transparent;border:0;border-radius:0;padding:0;gap:20px;color:#fff8e8;font-size:18px;text-shadow:0 2px 6px #211b13}
+.display.display-in-room .room-code{background:#fff8e81f;border:1px solid #fff8e840;border-radius:10px;padding:10px 16px;color:#fff0c8}
+.display.display-in-room .room-code b{font-size:27px;letter-spacing:4px}
+.display.display-in-room .pill{background:#163e37b3;color:#e5ffec;font-size:16px;padding:10px 18px;text-shadow:none}
+.display.display-in-room .question{background:#232623a3;backdrop-filter:blur(14px);border:1px solid #fff8e82b;border-radius:24px;box-shadow:0 14px 40px #151b1820;padding:28px 32px;color:#fff8e8}
+.display.display-in-room .question .section-title{font-size:16px;color:#ffe6b2;letter-spacing:1px}
+.display.display-in-room .timer{background:#fff8e81c;border:1px solid #fff8e830;color:#fff0c8;font-size:20px;padding:8px 16px;letter-spacing:0}
+.display.display-in-room .question h1{font-size:clamp(30px,3.2vw,52px);line-height:1.35;margin:20px 0 26px;color:#fffaf0;text-shadow:0 2px 8px #0003}
+.display.display-in-room .options{gap:16px}
+.display.display-in-room .option{border:1px solid #fff8e850;border-radius:15px;font-size:clamp(20px,1.8vw,30px);min-height:82px;padding:18px;gap:14px;color:#233b35;line-height:1.4;overflow-wrap:anywhere}
+.display.display-in-room .option-0{background:#f9e1e9eb}.display.display-in-room .option-1{background:#d9f1e8eb}.display.display-in-room .option-2{background:#fff0bdeb}.display.display-in-room .option-3{background:#deebfbeb}
+.display.display-in-room .letter{width:38px;height:38px;font-size:21px}
+.display.display-in-room .option strong{font-size:23px}
+.display.display-in-room .option:has(.vote-track){padding-bottom:26px}
+.display.display-in-room .most-votes{border:3px solid #ffe3a0;box-shadow:0 0 0 2px #aa8048;background:#fff1c9}
+.display.display-in-room .vote-track{height:5px;bottom:9px;background:#203e371c}
+.display.display-in-room .result-note{background:transparent;color:#fff0d0;font-size:16px;line-height:1.6;padding:0;margin:16px 0 0}
+.display.display-in-room .leaderboard{background:#232623a3;backdrop-filter:blur(14px);border:1px solid #fff8e82b;border-radius:22px;padding:22px;color:#fff8e8;box-shadow:none}
+.display.display-in-room .leaderboard h2{font-size:24px;color:#ffe5ac;margin-bottom:16px}
+.display.display-in-room .rank{font-size:17px;min-height:44px;padding:7px 8px;gap:10px;border-top:1px solid #fff8e81f}
+.display.display-in-room .rank:first-of-type{background:#ffe4a826;border-radius:10px}
+.display.display-in-room .rank>span:first-child{color:#ffe5ac}
+.display.display-in-room .rank strong{color:#fff3cf;font-size:20px}
+.display.display-in-room .rank .character{width:30px;height:34px}
+.display.display-in-room .spotlight{background:#232623b0;backdrop-filter:blur(14px);border:1px solid #fff8e82b;border-radius:20px;padding:20px 26px;color:#fff8e8}
+.display.display-in-room .spotlight>p{color:#ffe5ac}.display.display-in-room .spotlight blockquote{color:#fff8e8;font-size:18px;line-height:1.6}.display.display-in-room .spotlight>b{color:#e4d6bc}
+.display.display-in-room .waiting{min-height:300px}
+.display.display-in-room .waiting p{color:#fff0d0;font-size:20px}
+.display.display-in-room .island-scroll{background:linear-gradient(0deg,#e1bc8380,transparent)}
+.display.display-in-room .island-heading h2{background:#252b2480;color:#fff1cc;border:1px solid #fff8e830;font-size:14px;backdrop-filter:blur(8px)}
+.display.display-in-room .islander-name{background:#fff8e8d9;color:#203e37}
+@media(min-width:1000px){
+ .display.display-in-room #game{grid-template-columns:minmax(0,1fr) minmax(280px,.34fr);grid-template-rows:minmax(0,1fr);gap:20px;align-items:center}
+ .display.display-in-room .room-line{position:absolute;top:56px;left:320px;right:4vw}
+ .display.display-in-room .question{grid-row:1;max-height:100%;width:100%;align-self:center}
+ .display.display-in-room #game:not(:has(.leaderboard)) .question{max-width:1280px;justify-self:center}
+ .display.display-in-room .leaderboard{grid-column:2;grid-row:1;align-self:center;max-height:100%;margin:0}
+ .display.display-in-room #game:has(.spotlight){grid-template-rows:minmax(0,1.6fr) minmax(0,1fr)}
+ .display.display-in-room #game:has(.spotlight) .leaderboard{grid-row:1 / span 2}
+ .display.display-in-room .spotlight{grid-column:1;grid-row:2;max-height:100%;margin:0}
+ .display.display-in-room #game:has(.spotlight) .question{padding:18px 24px}
+ .display.display-in-room #game:has(.spotlight) .question h1{font-size:30px;margin:10px 0 16px}
+ .display.display-in-room #game:has(.spotlight) .option{min-height:60px;font-size:20px;padding:12px}
+}
+@media(min-width:1000px) and (max-height:850px){
+ .display.display-in-room main{padding:6px 3vw 10px}
+ .display.display-in-room .question{padding:20px 26px}
+ .display.display-in-room .question h1{font-size:34px;margin:14px 0 20px}
+ .display.display-in-room .option{font-size:22px;min-height:68px;padding:14px}
+ .display.display-in-room .result-note{font-size:14px;margin-top:12px}
+ .display.display-in-room .leaderboard{padding:18px}.display.display-in-room .leaderboard h2{font-size:22px}
+ .display.display-in-room .rank{min-height:38px;font-size:15px;padding:4px 6px}
+ .display.display-in-room #game:has(.spotlight){grid-template-rows:minmax(0,2fr) minmax(0,1fr)}
+ .display.display-in-room #game:has(.spotlight) .question h1{font-size:26px;margin:8px 0 10px}
+ .display.display-in-room #game:has(.spotlight) .option{font-size:18px;min-height:50px;padding:9px}
+}
+@media(max-width:999px){.display.display-in-room #game{display:flex;flex-direction:column;gap:18px}.display.display-in-room .room-line{width:100%;font-size:15px;gap:12px}.display.display-in-room .question,.display.display-in-room .leaderboard,.display.display-in-room .spotlight{width:100%;margin:0}.display.display-in-room .rank{display:flex;width:100%;margin:0}.display.display-in-room .question{padding:24px}.display.display-in-room .question h1{font-size:30px}.display.display-in-room .option{font-size:20px}.display.display-in-room .room-code b{font-size:22px}}
+@media(max-width:600px){.display.display-in-room .options{grid-template-columns:1fr}.display.display-in-room .question h1{font-size:26px}.display.display-in-room .question{padding:20px}.display.display-in-room .room-line .pill{margin-left:0;font-size:13px}}
+@media(min-width:1000px){.display.display-in-room .leaderboard:has(.rank:nth-of-type(11)){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:10px}.display.display-in-room .leaderboard:has(.rank:nth-of-type(11)) h2{grid-column:1/-1}.display.display-in-room .leaderboard:has(.rank:nth-of-type(11)) .rank{min-height:30px;font-size:14px;padding:3px 0;gap:4px}.display.display-in-room .leaderboard:has(.rank:nth-of-type(11)) .rank .character{width:22px;height:24px}.display.display-in-room .leaderboard:has(.rank:nth-of-type(11)) .rank strong{font-size:15px}.display.display-in-room .leaderboard:has(.rank:nth-of-type(11)) .rank>span:first-child{width:14px;flex-shrink:0}}
+@media(min-width:1000px) and (max-height:850px){.display.display-in-room .leaderboard:has(.rank:nth-of-type(11)){padding:14px}.display.display-in-room .leaderboard:has(.rank:nth-of-type(11)) h2{margin-bottom:10px;font-size:20px}.display.display-in-room .leaderboard:has(.rank:nth-of-type(11)) .rank{min-height:27px;padding:1px 0;font-size:12px}}
+.display.display-in-room .rank .character img{width:100%;height:100%;left:0;top:0;object-fit:contain}
+.display.display-in-room .rank strong{white-space:nowrap;flex-shrink:0}
+@media(min-width:1000px) and (max-height:850px){.display.display-in-room #game:has(.leaderboard) .question{padding:16px 24px}.display.display-in-room #game:has(.leaderboard) .question h1{font-size:30px;margin:12px 0 16px}.display.display-in-room #game:has(.leaderboard) .timer{font-size:14px;padding:6px 12px}.display.display-in-room #game:has(.leaderboard) .options{gap:12px}.display.display-in-room #game:has(.leaderboard) .option{min-height:60px;font-size:20px;padding:10px 12px 22px}.display.display-in-room #game:has(.leaderboard) .letter{width:30px;height:30px;font-size:18px}.display.display-in-room #game:has(.leaderboard) .result-note{margin-top:10px;font-size:13px}}
