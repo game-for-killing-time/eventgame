@@ -4,7 +4,7 @@ const voters=(result,members,index)=>Object.entries(result?.choices||{}).filter(
 export function voteStack(index,result,members,uid,code){
  const people=voters(result,members,index),total=result.counts[index];
  if(!total)return '<span class="vote-empty">尚無人選</span>';
- return `<div class="vote-summary"><span class="avatar-stack" aria-hidden="true">${people.slice(0,3).map(p=>`<span class="avatar-circle ${p.id===uid?'avatar-self':''}">${characterMarkup(characterId(p.id,code))}</span>`).join('')}${people.length>3?`<span class="avatar-circle avatar-more">+${people.length-3}</span>`:''}</span><button type="button" class="view-voters" data-view-voters="${index}" aria-haspopup="dialog" aria-label="查看選項 ${'ABCD'[index]} 的 ${total} 位作答者">查看 <small>${total}</small></button>${result.winners.includes(index)?'<span class="vote-winner" aria-label="最多人選">★</span>':''}</div>`;
+ return `<div class="vote-summary"><span class="avatar-stack" aria-hidden="true">${people.slice(0,3).map(p=>`<span class="avatar-circle ${p.id===uid?'avatar-self':''}">${characterMarkup(characterId(p.id,code))}</span>`).join('')}${people.length>3?`<span class="avatar-circle avatar-more">+${people.length-3}</span>`:''}</span><button type="button" class="view-voters" data-view-voters="${index}" aria-haspopup="dialog" aria-label="查看選項 ${'ABCD'[index]} 的 ${total} 位作答者">查看 <small>${total}</small></button>${result.winners?.includes(index)?'<span class="vote-winner" aria-label="最多人選">★</span>':''}</div>`;
 }
 export function createVoterDialog(root,getState){
  const dialog=document.createElement('dialog');dialog.className='voter-dialog';dialog.setAttribute('aria-labelledby','voterDialogTitle');

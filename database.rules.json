@@ -59,7 +59,7 @@
               ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.isNumber() && newData.val() % 1 === 0 && newData.val() >= 0 && newData.val() < 4)"
             },
             "prediction": {
-              ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.isNumber() && newData.val() % 1 === 0 && newData.val() >= 0 && newData.val() < 4)"
+              ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.isNumber() && newData.val() % 1 === 0 && ((root.child('room/public/state').child('ruleset').val() === 'spotlight-v1' && root.child('room/public/state').child('targetUid').val() === auth.uid) ? newData.val() === -1 : (newData.val() >= 0 && newData.val() < 4)))"
             },
             "at": {
               ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.val() === now)"

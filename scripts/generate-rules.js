@@ -18,6 +18,9 @@ membership.seat={'.validate':"newData.isString() && newData.val().matches(/^([0-
 rules.rules.room.public.seats={'$seat':{'.write':"auth != null && !data.exists() && newData.val() === auth.uid && $seat.matches(/^([0-9]|1[0-9])$/)",'.validate':"newData.parent().parent().child('members').child(auth.uid).child('seat').val() === $seat"}};
 function trustedValidation(node) {for(const [key,value] of Object.entries(node)) {if(typeof value==='string'&&key.startsWith('.'))node[key]=value.replace(/!((?:root|data|newData)(?:\.child\([^)]*\))+\.val\(\))/g,'$1 !== true').replace(/(root\.child\('room\/public\/state'\)\.child\('chatOpen'\)\.val\(\))/g,'$1 === true');if(key==='.validate') node[key]=`(${host}) || (${node[key]})`; else if(value && typeof value==='object') trustedValidation(value);}}
 rules.rules.room.hostOnly={'.read':host,'.write':host};
+const targetRule=`${state}.child('ruleset').val() === 'spotlight-v1' && ${state}.child('targetUid').val() === auth.uid`;
+rules.rules.room.answers.$round.$uid.prediction['.validate']=`newData.isNumber() && newData.val() % 1 === 0 && ((${targetRule}) ? newData.val() === -1 : (newData.val() >= 0 && newData.val() < 4))`;
+
 rules.rules.room.public.island={'.write':host};
 rules.rules.room.effects={
  chat:{'.read':`${state}.child('chatEffects').val() === true && ${state}.child('chatOpen').val() === true && ${state}.child('status').val() !== 'ended'`,'.write':host},

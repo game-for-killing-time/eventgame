@@ -32,7 +32,7 @@ export function migrateAffinity(room){
  if(room.hostOnly?.affinity?.version===1)return room;
  const affinity={version:1,rounds:{},pairs:{}};
  const rounds=Object.keys(room.public.results||{}).map(Number).filter(n=>n<room.public.state.round||(n===room.public.state.round&&['revealed','ended'].includes(room.public.state.status))).sort((a,b)=>a-b);
- for(const round of rounds)addAffinityRound(affinity,round,room.answers?.[round]||{});
+ for(const round of rounds.filter(n=>room.public.results[n].kind!=='spotlight-v1'))addAffinityRound(affinity,round,room.answers?.[round]||{});
  room.hostOnly??={};room.hostOnly.affinity=affinity;
  room.public.island=islandLayout(room.public.members,affinity.pairs,rounds.at(-1)||0);
  return room;

@@ -16,7 +16,7 @@ const submit=(d,uid,choice=0,prediction=0,round=1)=>set(ref(d,`room/answers/${ro
 const chat=(d,uid,text='hello',seq=1)=>update(ref(d,`room/chat/${uid}`),{seq,lastSent:serverTimestamp(),[`messages/${seq}`]:{text,at:serverTimestamp()}});
 before(async()=>{env=await initializeTestEnvironment({projectId:'demo-hoho',database:{host:'127.0.0.1',port:9000,rules:readFileSync('database.rules.json','utf8')}});});
 after(async()=>env?.cleanup());
-beforeEach(async()=>{await env.clearDatabase();await seed(async d=>{const r=newRoom('PARTY1');r.public.state=startRound(r,questions[0],Date.now(),120);await set(ref(d),{config:{hostUid:'host'},room:r});});});
+beforeEach(async()=>{await env.clearDatabase();await seed(async d=>{const r=newRoom('PARTY1','legacy');r.public.state=startRound(r,questions[0],Date.now(),120);await set(ref(d),{config:{hostUid:'host'},room:r});});});
 test('10 independent clients join, synchronize, submit, overwrite and score once',async()=>{
  const clients=Array.from({length:10},(_,i)=>({id:`p${i}`,db:db(`p${i}`)}));
  await Promise.all(clients.map((c,i)=>assertSucceeds(join(c.db,c.id,String(i)))));

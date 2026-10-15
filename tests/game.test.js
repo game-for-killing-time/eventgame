@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {tally,leaderboard,newRoom,startRound,settleRoom,publishRevealedChoices} from '../src/game.js';
 import {questions} from '../src/questions.js';
-test('12 valid four-choice questions',()=>{assert.equal(questions.length,12);for(const q of questions)assert.equal(q.options.length,4);});
+test('30 valid four-choice questions',()=>{assert.equal(questions.length,30);for(const q of questions)assert.equal(q.options.length,4);});
 test('ties award any winning prediction; zero votes award nothing',()=>{assert.deepEqual(tally({a:{choice:0,prediction:1},b:{choice:1,prediction:0},c:{choice:2,prediction:3}}),{counts:[1,1,1,0],total:3,winners:[0,1,2],points:{a:1,b:1,c:0}});assert.deepEqual(tally(),{counts:[0,0,0,0],total:0,winners:[],points:{}});});
-test('full round and idempotent settlement, stale retry cannot affect next round',()=>{const r=newRoom('PARTY1');r.public.members={a:{name:'甲'},b:{name:'乙'}};r.public.state=startRound(r,questions[0],1000);r.answers[1]={a:{choice:0,prediction:0},b:{choice:1,prediction:0}};r.public.state.status='closed';settleRoom(r,1);settleRoom(r,1);assert.deepEqual(leaderboard(r.public.results,r.public.members).map(x=>x.score),[1,1]);r.public.state=startRound(r,questions[1],10000);assert.equal(settleRoom(r,1),undefined);assert.equal(r.public.state.round,2);assert.throws(()=>startRound(r,questions[2],12000));});
+test('full round and idempotent settlement, stale retry cannot affect next round',()=>{const r=newRoom('PARTY1','legacy');r.public.members={a:{name:'甲'},b:{name:'乙'}};r.public.state=startRound(r,questions[0],1000);r.answers[1]={a:{choice:0,prediction:0},b:{choice:1,prediction:0}};r.public.state.status='closed';settleRoom(r,1);settleRoom(r,1);assert.deepEqual(leaderboard(r.public.results,r.public.members).map(x=>x.score),[1,1]);r.public.state=startRound(r,questions[1],10000);assert.equal(settleRoom(r,1),undefined);assert.equal(r.public.state.round,2);assert.throws(()=>startRound(r,questions[2],12000));});
 
 import {characterId,characters} from '../src/characters.js';
 test('room avatars stay stable across clients and allow repeated characters',()=>{
@@ -37,7 +37,7 @@ test('complete-link groups do not chain unlike players, ties and layout are stab
  assert.ok(Object.values(layout.positions).every(p=>Object.keys(p).sort().join(',')==='x,y'));
 });
 test('migration excludes open/closed current answers and can resume without double scores',()=>{
- const r=newRoom('OLD123');r.public.members={a:{name:'a',seat:'0'},b:{name:'b',seat:'1'}};
+ const r=newRoom('OLD123','legacy');r.public.members={a:{name:'a',seat:'0'},b:{name:'b',seat:'1'}};
  r.public.state={...r.public.state,round:3,status:'closed'};r.public.results={1:tally({a:{choice:0,prediction:0},b:{choice:0,prediction:0}}),2:tally({a:{choice:1,prediction:1},b:{choice:1,prediction:1}})};
  r.answers={1:{a:{choice:0},b:{choice:0}},2:{a:{choice:1},b:{choice:1}},3:{a:{choice:2},b:{choice:0}}};
  migrateAffinity(r);assert.deepEqual(pairStats(r.hostOnly.affinity.pairs,'a','b'),{shared:2,same:2});assert.equal(r.public.island.round,2);
@@ -48,7 +48,7 @@ test('migration excludes open/closed current answers and can resume without doub
 
 import {relayEffects} from '../src/effects.js';
 test('effects publish only recent sanitized presentation data and are idempotent',()=>{
- const r=newRoom('PARTY1');r.public.members={a:{name:'A'}};r.public.state=startRound(r,questions[0],10000);r.answers={1:{a:{choice:2,prediction:3,at:10000}}};
+ const r=newRoom('PARTY1','legacy');r.public.members={a:{name:'A'}};r.public.state=startRound(r,questions[0],10000);r.answers={1:{a:{choice:2,prediction:3,at:10000}}};
  assert.ok(relayEffects(r,{code:'PARTY1',kind:'submissions',round:1},10001));assert.deepEqual(r.effects.submissions,{round:1,items:{a:10000}});
  r.answers[1].a.at=11000;assert.equal(relayEffects(r,{code:'PARTY1',kind:'submissions',round:1},11001),undefined);
  r.chat={a:{messages:{1:{text:'hello',at:10000}}}};assert.ok(relayEffects(r,{code:'PARTY1',kind:'chat',uid:'a',seq:1},11000));assert.deepEqual(r.effects.chat.a,{seq:1,text:'hello',at:10000});
@@ -61,7 +61,7 @@ test('effects publish only recent sanitized presentation data and are idempotent
 });
 
 test('revealed choices publish once, never include predictions or unfinished rounds',()=>{
- const r=newRoom('PARTY1');r.public.members={a:{name:'A',seat:'0'},b:{name:'B',seat:'1'}};
+ const r=newRoom('PARTY1','legacy');r.public.members={a:{name:'A',seat:'0'},b:{name:'B',seat:'1'}};
  r.public.state=startRound(r,questions[0],1000);r.answers[1]={a:{choice:2,prediction:0,at:1100},b:{choice:1,prediction:3,at:1200}};
  assert.equal(r.public.results,undefined);assert.equal(settleRoom(r,1),undefined);
  r.public.state.status='closed';settleRoom(r,1);assert.deepEqual(r.public.results[1].choices,{a:2,b:1});
