@@ -360,3 +360,22 @@ header nav{font-size:13px;gap:20px}
 .viewer.in-room .voter-detail{border-color:#fff8e826}.viewer.in-room .voter-detail-self{color:#a9e4cd}
 @media(min-width:700px){.viewer.in-room .options:not(.revealed){grid-template-columns:1fr 1fr}.viewer.in-room .prediction span{display:block;width:100%;font-size:13px}.viewer.in-room .prediction{padding:12px}}
 @media(max-width:600px){.viewer.in-room{background-position:36% center}.viewer.in-room main{padding-inline:12px}.viewer.in-room .question,.viewer.in-room .panel,.viewer.in-room .spotlight{padding:20px 16px;border-radius:20px}.viewer.in-room .question h1{font-size:26px;margin:16px 0 22px}.viewer.in-room .option{min-height:62px}.viewer.in-room .player-tabs button{font-size:14px}.viewer.in-room .revealed .option{grid-template-columns:30px minmax(0,1fr);padding:12px;gap:8px}.viewer.in-room .vote-summary{grid-column:2;justify-content:flex-start}.viewer.in-room .vote-winner{grid-column:2}}
+/* Revealed broadcast answers also identify their voters. */
+.display.display-in-room .option:has(.vote-summary){flex-wrap:wrap}
+.display.display-in-room .option>.vote-summary{flex-basis:100%;justify-content:flex-start;margin-top:2px;gap:8px}
+.display.display-in-room .vote-summary .avatar-circle{width:32px;height:32px;flex-basis:32px}
+.display.display-in-room .vote-summary .character{width:28px;height:28px;transform:none}
+.display.display-in-room .vote-summary .character img{width:100%;height:100%;left:0;top:0;object-fit:contain}
+.display.display-in-room .view-voters{font-size:13px;min-height:32px;padding:4px 8px}
+.display.display-in-room .vote-summary .vote-winner{display:none}
+.display.display-in-room .voter-dialog{background:#29382ff5;border:1px solid #fff8e840;color:#fff8e8;backdrop-filter:blur(16px)}
+.display.display-in-room .voter-dialog-heading{background:#fff8e80c;border-color:#fff8e826}
+.display.display-in-room .voter-dialog-heading p,.display.display-in-room .voter-detail small{color:#e8ddc8}
+.display.display-in-room .voter-detail{border-color:#fff8e826}
+.display.display-in-room .voter-dialog .character img{width:100%;height:100%;left:0;top:0;object-fit:contain}
+@media(min-width:1000px) and (max-height:850px){
+ .display.display-in-room #game:has(.leaderboard) .option:has(.vote-summary){display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:3px 10px;padding:6px 12px 18px;font-size:18px;min-height:0}
+ .display.display-in-room .option>.vote-summary{grid-column:1/-1;margin:0}
+ .display.display-in-room #game:has(.leaderboard) .question:has(.vote-summary) h1{font-size:28px;margin:8px 0 12px}
+ .display.display-in-room #game:has(.leaderboard) .question:has(.vote-summary){padding:12px 22px}
+}
