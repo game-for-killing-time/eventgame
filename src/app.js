@@ -98,7 +98,7 @@ function render(){
  else html+=`<div class="options ${result?'revealed':''}">${s.question.options.map((o,i)=>`<div class="option option-${i} ${result?.winners?.includes(i)?'most-votes':''}" style="--vote-share:${result?.total?Math.round(result.counts[i]/result.total*100):0}%"><span class="letter">${'ABCD'[i]}</span><span>${esc(o)}</span>${result?(role==='viewer'?voteStack(i,result,pub.members||{},api.uid(),s.code):`<strong>${result.counts[i]} 票 ${result.winners?.includes(i)?'★':''}</strong><span class="vote-track" aria-hidden="true"><i></i></span>${role==='display'?voteStack(i,result,pub.members||{},null,s.code):''}`):''}</div>`).join('')}</div>`;
  if(result&&role!=='viewer')html+=`<p class="result-note">${result.total===0?'這題零票，不計分。下題再來！':`${result.total} 人作答 · ${result.winners.length>1?'最高票並列，猜中任一項都得分。':'★ 是最多人選的答案。'}`}${joined?`<br>你本輪得 ${result.points?.[api.uid()]||0} 分${result.points?.[api.uid()]===1?'，默契到位！':'，來聽聽大家的理由。'}`:''}</p>`;
  html+='</article>';
- }else html+=`<article class="question waiting"><div class="waiting-crew">${[0,1,2,3,4].map(i=>characterMarkup(i,true)).join('')}</div><h1>先坐好，題目快來了。</h1><p>${spotlight?`每題輪流讓一位朋友當主角。選自己的答案，再猜主角；每回合 ${s.questionsPerCycle} 題，共 ${s.cycles} 回合。`:'選自己的答案，再猜最多人選哪個。不比手速，放心慢慢想。'}</p></article>`;
+ }else html+=`<article class="question waiting"><div class="waiting-crew">${[0,1,2,3,4].map(i=>characterMarkup(i,true)).join('')}</div><h1>先坐好，題目快來了。</h1><p>${spotlight?`${count<2?`目前 ${count} 位入座，至少 2 位才能開始。請邀請另一位朋友加入。`:'人數已足夠，等待主持人按「開始這題」。'}玩家不需要按開始；題目會自動出現。主角只選自己的答案，其他人再猜主角。`:'選自己的答案，再猜最多人選哪個。不比手速，放心慢慢想。'}</p></article>`;
  if(pub.story&&pub.story.round===s.round)html+=`<section class="spotlight ${pub.story.text.length<=140?'short-story':''}"><p>主持人選中的故事</p><blockquote>「${esc(pub.story.text)}」</blockquote><b>— ${esc(pub.story.name)}</b></section>`;
  if(result||s.status==='ended'||role==='viewer')html+=`<section class="panel leaderboard"><h2>${spotlight?'心水清排行榜':'猜大家排行榜'}</h2>${spotlight?masterCard(pub.awards,pub.members||{}):''}${board.length?board.map((p,i)=>`<div class="rank"><span>${i&&p.score===board[i-1].score?'＝':board.findIndex(x=>x.score===p.score)+1}</span>${avatar(p.id)}<b>${esc(p.name)}${pub.awards?.winners?.[p.id]?'<span class="master-badge">心水清大師</span>':''}</b><strong>${p.score} <small>分</small></strong></div>`).join(''):'<p>還沒有人入座。</p>'}</section>`;
  replace('game',html);
@@ -146,6 +146,11 @@ function renderHost(){
  if(s.submitEffects===true)relayOnce(s.code+'/answers/'+s.round+'/'+JSON.stringify(privateRoom.answers?.[s.round]||{}),{code:s.code,round:s.round,kind:'submissions'});
  $('submitted').textContent=`${Object.keys(privateRoom.answers?.[s.round]||{}).length} / ${Object.keys(pub.members||{}).length} 人已提交`;
  $('hostGuide').textContent={waiting:'朋友入座後，選一道暖場題開始。',open:'作答進行中，可延長或提前截止，不必等所有人。',closed:'作答已鎖定，準備好就揭曉大家的選擇。',revealed:s.completed?'本場已完成，留點時間分享，再結束房間。':'留點時間聽故事，再選下一題。',ended:'活動已結束；需要保留資料請先匯出，再清理。'}[s.status]||'';
+ const waitingForPlayers=spotlight&&['waiting','revealed'].includes(s.status)&&!s.completed&&Object.keys(pub.members||{}).length<2;
+ if(waitingForPlayers)$('hostGuide').textContent=`目前 ${Object.keys(pub.members||{}).length} 位入座，至少 2 位才能輪流猜主角。請分享邀請連結；主持人若要參加，也須按「我要一起玩」入座。登入主持頁不會自動算作玩家。${s.locked?'目前已鎖定加入，請先按「重新開放加入」。':''}`;
+ else if(spotlight&&s.status==='waiting')$('hostGuide').textContent='人數已足夠。選好題目後，按「開始這題」；所有玩家會自動收到題目。';
+ $('start').textContent=waitingForPlayers?'等待至少 2 位入座':'開始這題 · 45 秒';
+ $('start').setAttribute('aria-describedby','hostGuide');
  $('lock').textContent=s.locked?'重新開放加入':'鎖定加入';$('toggleChat').textContent=s.chatOpen?'關閉聊天':'開啟聊天';
  $('create').disabled=true;for(const id of ['lock','toggleChat','end'])$(id).disabled=s.status==='ended';$('clean').disabled=s.status!=='ended';$('start').disabled=!['waiting','revealed'].includes(s.status)||s.completed===true||(spotlight&&Object.keys(pub.members||{}).length<2);$('reveal').disabled=!['closed','revealed'].includes(s.status);$('close').disabled=s.status!=='open';$('extend').disabled=s.status!=='open'||api.now()>=s.deadline;
  const ended=s.status==='ended';
