@@ -1,5 +1,6 @@
 import {isSpotlight,configureSpotlight,awardMasters,targetFirst,activateGuesses,skipTarget} from './spotlight.js';
 import {endRoom} from './end-room.js';
+import {autoRevealRound,sameRound} from './auto-reveal.js';
 import {migrateAffinity} from './affinity.js';
 import {relayEffects} from './effects.js';
 import {config} from '../config.js';
@@ -36,11 +37,12 @@ export async function connect(role,onConnection) {
  if(action==='chatEffects'||action==='submitEffects'){await d.update(ref('room'),{[`public/state/${action}`]:value,[`effects/${action==='chatEffects'?'chat':'submissions'}`]:null});return;}
  if(action==='clean'){const r=await d.runTransaction(ref('room'),room=>!room||room.public.state.status==='ended'?null:undefined,{applyLocally:false});if(!r.committed) throw Error('請先結束房間。');return;}
  if(action==='migrate'){const expected=await get('room/public/state');if(!expected)return;await d.runTransaction(ref('room'),r=>!r?null:r.public.state.code===expected.code?publishRevealedChoices(migrateAffinity(r)):undefined,{applyLocally:false});return;}
- if(action==='reveal'){const expected=await get('room/public/state');const r=await d.runTransaction(ref('room'),room=>room?settleRoom(room,expected.round,expected.code,d.serverTimestamp()):null,{applyLocally:false});if(!r.committed)throw Error('這輪狀態已改變，請重新確認。');return;}
+ if(action==='autoReveal'){await d.runTransaction(ref('room'),room=>autoRevealRound(room,value,api.now(),d.serverTimestamp()),{applyLocally:false});return;}
+ if(action==='reveal'){const expected=value||await get('room/public/state');const r=await d.runTransaction(ref('room'),room=>!room?null:sameRound(room.public.state,expected)?settleRoom(room,expected.round,expected.code,d.serverTimestamp()):undefined,{applyLocally:false});if(!r.committed)throw Error('這輪狀態已改變，請重新確認。');return;}
  if(action==='configure'){const result=await d.runTransaction(ref('room'),r=>r?configureSpotlight(r,value):null,{applyLocally:false});if(!result.committed)throw Error('請先建立房間。');return;}
  if(action==='openGuesses'||action==='skipTarget'){const expected=value||await get('room/public/state');const result=await d.runTransaction(ref('room'),r=>action==='openGuesses'?activateGuesses(r,expected,api.now()):skipTarget(r,expected),{applyLocally:false});if(action==='skipTarget'&&!result.committed)throw Error('主角已提交或題目已變更，不能跳過。');return;}
  if(action==='start'){const expected=await get('room/public/state');const result=await d.runTransaction(ref('room'),r=>{if(!r)return null;if(r.public.state.code!==expected?.code||r.public.state.round!==expected.round)return; r.public.state=startRound(r,value,api.now());delete r.public.story;return r;},{applyLocally:false});if(!result.committed)throw Error('房間已變更，請確認目前題目。');return;}
- if(action==='close'||action==='extend'){const expected=value||await get('room/public/state');await d.runTransaction(ref('room/public/state'),s=>{if(!s)return null;if(s.code!==expected.code||s.round!==expected.round||s.status!=='open'||(action==='extend'&&s.deadline<=api.now())) return;return {...s,...(action==='close'?{status:'closed'}:{deadline:s.deadline+15000})};},{applyLocally:false});return;}
+ if(action==='close'||action==='extend'){const expected=value||await get('room/public/state');await d.runTransaction(ref('room/public/state'),s=>{if(!s)return null;if(!sameRound(s,expected)||s.status!=='open'||(action==='extend'&&s.deadline<=api.now())) return;return {...s,...(action==='close'?{status:'closed'}:{deadline:s.deadline+15000})};},{applyLocally:false});return;}
  if(action==='end'){const expected=await get('room/public/state');if(!expected)throw Error('目前沒有房間可結束。');const result=await d.runTransaction(ref('room'),r=>endRoom(r,expected.code),{applyLocally:false});if(!result.committed||result.snapshot.val()?.public?.state?.status!=='ended')throw Error('房間已變更，請重新確認後再結束。');return;}
  if(action==='lock'||action==='chatOpen'){await d.set(ref(`room/public/state/${action==='lock'?'locked':'chatOpen'}`),value);return;}
  if(action==='mute'){await d.update(ref('room'),{[`moderation/${value.uid}/muted`]:value.muted,...(value.muted?{[`effects/chat/${value.uid}`]:null}:{})});return;}
@@ -71,6 +73,7 @@ function demo(role,onConnection){
  async chat(text){const r=read();if(!r?.public.members?.[uid]||r.moderation?.[uid]?.muted||!r.public.state.chatOpen)throw Error('目前無法發言。');r.chat??={};const c=r.chat[uid]??={seq:0,messages:{},lastSent:0};if(Date.now()-c.lastSent<3000||text.length>240)throw Error('請隔三秒再發言，最多 240 字。');c.messages[++c.seq]={text,at:Date.now()};c.lastSent=Date.now();save(r);},
  async story(round,text){const r=read();if(!r?.public.members?.[uid]||r.moderation?.[uid]?.muted||r.public.state.status!=='revealed'||text.length>500)throw Error('現在不能投稿。');r.stories??={};r.stories[round]??={};r.stories[round][uid]={text,at:Date.now()};save(r);},
  async command(action,value){let r=read();if(!r)throw Error('請先建立房間。');const s=r.public.state;
+ if(action==='autoReveal'){const next=autoRevealRound(r,value,Date.now());if(next)save(next);return;}
  if(action==='relayEffects'){const next=relayEffects(r,value,Date.now());if(next)save(next);return;}
  if(action==='chatEffects'||action==='submitEffects'){s[action]=value;if(r.effects)delete r.effects[action==='chatEffects'?'chat':'submissions'];}
  if(action==='demoParticipants'){
@@ -86,10 +89,10 @@ function demo(role,onConnection){
  if(action==='skipTarget'){const next=skipTarget(r,value||s);if(!next)throw Error('主角已提交或題目已變更，不能跳過。');save(next);return;}
  if(action==='configure')configureSpotlight(r,value);
  if(action==='start'){r.public.state=startRound(r,value,Date.now());delete r.public.story;}
- if(action==='close'&&s.status==='open')s.status='closed';
+ if(action==='close'&&sameRound(s,value||s)&&s.status==='open')s.status='closed';
  if(action==='extend'&&s.status==='open'&&s.deadline>Date.now())s.deadline+=15000;
  if(action==='migrate')r=publishRevealedChoices(migrateAffinity(r));
- if(action==='reveal')r=settleRoom(r,s.round,s.code)||r;
+ if(action==='reveal'&&sameRound(s,value||s))r=settleRoom(r,s.round,s.code)||r;
  if(action==='end'){s.status='ended';s.locked=true;s.chatOpen=false;awardMasters(r);}
  if(action==='clean'){if(s.status!=='ended')throw Error('請先結束房間。');r=null;}
  if(action==='lock')s.locked=value;

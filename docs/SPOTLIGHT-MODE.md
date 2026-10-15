@@ -115,3 +115,11 @@ node scripts/add-voyage-rules.mjs
 截圖：[玩家倒數](screenshots/reveal-player-countdown.png)、[玩家揭曉](screenshots/reveal-player-popup.png)、[展示頁揭曉](screenshots/reveal-display-popup.png)。截圖使用本機 Emulator 測試房間，並非正式觀眾資料。
 
 時間同步依據：[Firebase 官方伺服器時間戳與時鐘偏差說明](https://firebase.google.com/docs/database/web/offline-capabilities#server-timestamps)。
+
+## 自動揭曉（2026-10-15）
+
+- 主持頁保持登入、開啟及連線時，全體在座玩家完成有效作答，或 45 秒倒數到期，會自動揭曉並結算。
+- 「提前截止」會暫停自動揭曉；只有這時顯示「揭曉答案」按鈕，由主持人決定公布時間。下一題仍由主持人開始。
+- 主持端會在資料庫交易內重新檢查房間、題號、attempt、作答及截止時間；多個主持頁同時操作也不會重複計分。提前截止後不會被延遲的自動請求覆蓋。
+- 暫時離線會重試；主持頁重新連線或重新開啟後，已過期的開放題目也會自動揭曉。
+- 沿用現有資料庫權限，僅主持人可結算；玩家及展示頁只接收公布後的結果。主角先作答階段不會提前揭曉。

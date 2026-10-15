@@ -1,0 +1,50 @@
+import test,{before,after,beforeEach} from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {initializeTestEnvironment,assertFails} from '@firebase/rules-unit-testing';
+import {ref,set,get,update,runTransaction,serverTimestamp} from 'firebase/database';
+import {newRoom,startRound,settleRoom} from '../src/game.js';
+import {activateGuesses} from '../src/spotlight.js';
+import {autoRevealRound} from '../src/auto-reveal.js';
+let env,expected;
+const host=()=>env.authenticatedContext('host',{firebase:{sign_in_provider:'password'}}).database();
+const options={applyLocally:false};
+before(async()=>{env=await initializeTestEnvironment({projectId:'demo-auto-reveal',database:{host:'127.0.0.1',port:9000,rules:readFileSync('database.rules.json','utf8')}});});
+after(async()=>env?.cleanup());
+beforeEach(async()=>{
+ await env.clearDatabase();
+ const r=newRoom('AUTO01');r.public.members={a:{name:'甲',seat:'0',joined:1},b:{name:'乙',seat:'1',joined:2}};
+ r.public.state=startRound(r,{id:'q1',text:'測試題',options:['甲','乙','丙','丁']},Date.now());
+ r.answers[1]={a:{choice:1,prediction:-1,attempt:r.public.state.attempt,at:Date.now()}};
+ activateGuesses(r,{...r.public.state},Date.now());expected={...r.public.state};
+ await env.withSecurityRulesDisabled(c=>set(ref(c.database()),{config:{hostUid:'host'},room:r}));
+});
+test('last player submission reveals atomically for all clients, with no duplicate scoring',async()=>{
+ const h=host(),b=env.authenticatedContext('b',{firebase:{sign_in_provider:'anonymous'}}).database();
+ const display=env.unauthenticatedContext().database();
+ const auto=db=>runTransaction(ref(db,'room'),r=>autoRevealRound(r,expected,Date.now(),serverTimestamp()),options);
+ assert.equal((await auto(h)).committed,false);
+ await assertFails(get(ref(display,'room/answers/1/a')));
+ await assertFails(auto(b));
+ await set(ref(b,'room/answers/1/b'),{choice:2,prediction:1,attempt:expected.attempt,at:serverTimestamp()});
+ const results=await Promise.all([auto(h),auto(host())]);assert.equal(results.filter(r=>r.committed).length,1);
+ const result=(await get(ref(display,'room/public/results/1'))).val();
+ assert.equal(result.total,2);assert.equal(result.points.b,1);assert.equal(typeof result.revealedAt,'number');
+ assert.deepEqual((await get(ref(b,'room/public/results/1'))).val(),result);
+ assert.equal((await auto(h)).committed,false);
+ assert.equal((await get(ref(h,'room/hostOnly/spotlight/players/a/turns'))).val(),1);
+});
+test('manual close wins over a pending automatic reveal and retains manual settlement',async()=>{
+ const h=host();await update(ref(h,'room/public/state'),{status:'closed'});
+ assert.equal((await runTransaction(ref(h,'room'),r=>autoRevealRound(r,expected,expected.deadline+1,serverTimestamp()),options)).committed,false);
+ assert.equal((await get(ref(h,'room/public/results'))).exists(),false);
+ await runTransaction(ref(h,'room'),r=>r?settleRoom(r,1,'AUTO01',serverTimestamp()):null,options);
+ assert.equal((await get(ref(h,'room/public/state/status'))).val(),'revealed');
+});
+test('expired rounds recover on a fresh host connection without waiting for missing answers',async()=>{
+ await env.withSecurityRulesDisabled(c=>update(ref(c.database(),'room/public/state'),{deadline:Date.now()-1000}));
+ const h=host();const seen=[];
+ const result=await runTransaction(ref(h,'room'),r=>{seen.push(r);return autoRevealRound(r,expected,Date.now(),serverTimestamp());},options);
+ assert.equal(seen[0],null);assert.equal(result.committed,true);
+ assert.equal(result.snapshot.val().public.results[1].total,1);
+});

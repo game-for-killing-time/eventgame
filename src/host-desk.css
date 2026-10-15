@@ -1,6 +1,6 @@
 /* The host shares the players' evening campfire palette and glass surfaces. */
-.host{--host-ink:#fff8e8;--host-muted:#e8ddc8;--host-line:#fff8e82b;--host-surface:#232623e6;--host-green:#216b54;background:#77563a url('../public/art/island-campfire-wide-1920.png') center / cover fixed;color:var(--host-ink)}
-.host::before{content:'';position:fixed;inset:0;background:#171c2273;pointer-events:none}
+.host{--host-ink:#fff8e8;--host-muted:#e8ddc8;--host-line:#fff8e82b;--host-surface:#00000082;--host-green:#216b54;background:#77563a url('../public/art/island-campfire-wide-1920.png') center / cover fixed;color:var(--host-ink)}
+.host::before{content:'';position:fixed;inset:0;background:transparent;pointer-events:none}
 .host #app{position:relative}
 .host header,.host footer{background:transparent;border:0}
 .host a{color:#ffe3a0}
