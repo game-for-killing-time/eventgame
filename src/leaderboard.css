@@ -1,0 +1,8 @@
+.leaderboard .leaderboard-switch{display:flex;gap:6px;margin:0 0 14px;grid-column:1/-1;flex-shrink:0}
+.leaderboard .leaderboard-switch button{flex:1;min-width:0;padding:8px 10px;min-height:40px;font-size:14px;border:1px solid #8caea1;border-radius:10px;background:#fff8e8;color:#244b3f;box-shadow:none}
+.leaderboard .leaderboard-switch button[aria-pressed=true]{background:#216b54;border-color:#b4d5b9;color:#fff8e8}
+.leaderboard .leaderboard-switch button:focus-visible{outline:3px solid #f6d78c;outline-offset:3px}
+.leaderboard .leaderboard-rule{grid-column:1/-1;font-size:13px;line-height:1.6;margin:0 0 14px;color:inherit;opacity:.85}
+.display.display-in-room .leaderboard .leaderboard-switch{margin-bottom:10px}
+.display.display-in-room .leaderboard .leaderboard-switch button{font-size:14px;min-height:38px;padding:6px 8px}
+.display.display-in-room .leaderboard .leaderboard-rule{font-size:12px;margin-bottom:10px}

@@ -1,6 +1,6 @@
 import './spotlight.css';
 import {isSpotlight,nextSpotlight,targetFirst} from './spotlight.js';
-import {spotlightQuestion,masterCard} from './spotlight-view.js';
+import {spotlightQuestion} from './spotlight-view.js';
 import {countdown,createSpotlightReveal} from './spotlight-presentation.js';
 import {hostModes} from './host-modes.js';
 import {voteStack,createVoterDialog} from './voter-view.js';
@@ -12,7 +12,7 @@ import {pairStats,qualifies} from './affinity.js';
 import {connect} from './backend.js';
 import {autoRevealReason} from './auto-reveal.js';
 import {questions} from './questions.js';
-import {leaderboard} from './game.js';
+import {leaderboardPanel} from './leaderboard-view.js';
 import {config} from '../config.js';
 import {pageLink} from './navigation.js';
 import {characterId,characterMarkup} from './characters.js';
@@ -27,6 +27,7 @@ const explicitDemo=new URLSearchParams(location.search).get('demo')==='1';
 const link=(page,room='')=>pageLink(page,{demo:explicitDemo,room});
 const storagePrefix=explicitDemo||!config.firebase?'hoho-demo':'hoho-live';
 let savedCode=new URLSearchParams(location.search).get('room')||localStorage.getItem(`${storagePrefix}-room`)||'';
+let rankBoard='insight';
 let pane='answer',unread=0,chatInitialized=false,seenMessages=new Set(),migrationCode=null,migrating=false;
 const button=(id,text,cls='')=>`<button id="${id}" class="${cls}">${text}</button>`;
 document.body.classList.add(role);
@@ -105,8 +106,6 @@ function render(){
  const spotlight=isSpotlight(s),result=pub.results?.[s.round], isOpen=s.status==='open'&&api.now()<s.deadline, count=Object.keys(pub.members||{}).length;
  const ownSubmitted=!!ownAnswer&&(!targetFirst(s)||ownAnswer.attempt===s.attempt);
  const canAnswer=joined&&!sending&&!(spotlight&&api.uid()===s.targetUid&&ownSubmitted)&&(targetFirst(s)?(api.uid()===s.targetUid?s.status==='thinking':isOpen):isOpen);
- const board=leaderboard(pub.results,pub.members);
- const avatar=uid=>characterMarkup(characterId(uid,s.code));
 
  let html=role==='host'?'':`<div class="room-line"><span class="room-code">房間 <b>${esc(s.code)}</b></span><span>${count} / 20 人入座</span><span class="pill">${labels[s.status==='open'&&!isOpen?'closed':s.status]||'等待中'}</span></div>`;
 
@@ -118,8 +117,9 @@ function render(){
  html+='</article>';
  }else html+=`<article class="question waiting"><div class="waiting-crew">${[0,1,2,3,4].map(i=>characterMarkup(i,true)).join('')}</div><h1>先坐好，題目快來了。</h1><p>${spotlight?`目前 ${count} 位入座，至少 2 位才能開始。<br>玩家只需要等待，讓主持人按開始鍵開始。`:'選自己的答案，再猜最多人選哪個。不比手速，放心慢慢想。'}</p></article>`;
  if(pub.story&&pub.story.round===s.round)html+=`<section class="spotlight ${pub.story.text.length<=140?'short-story':''}"><p>主持人選中的故事</p><blockquote>「${esc(pub.story.text)}」</blockquote><b>— ${esc(pub.story.name)}</b></section>`;
- if(result||s.status==='ended'||role==='viewer')html+=`<section class="panel leaderboard"><h2>${spotlight?'心水清排行榜':'猜大家排行榜'}</h2>${spotlight?masterCard(pub.awards,pub.members||{}):''}${board.length?board.map((p,i)=>`<div class="rank"><span>${i&&p.score===board[i-1].score?'＝':board.findIndex(x=>x.score===p.score)+1}</span>${avatar(p.id)}<b>${esc(p.name)}${pub.awards?.winners?.[p.id]?'<span class="master-badge">心水清大師</span>':''}</b><strong>${p.score} <small>分</small></strong></div>`).join(''):'<p>還沒有人入座。</p>'}</section>`;
+ if(result||s.status==='ended'||role==='viewer')html+=leaderboardPanel(pub,rankBoard);
  replace('game',html);
+ document.querySelectorAll('[data-rank-board]').forEach(button=>button.onclick=()=>{rankBoard=button.dataset.rankBoard;render();});
  document.querySelectorAll('input[name="choice"]').forEach(el=>el.onchange=()=>{choice=+el.value;ack='選擇已修改，請提交。';render();});
  document.querySelectorAll('input[name="prediction"]').forEach(el=>el.onchange=()=>{prediction=+el.value;ack='選擇已修改，請提交。';render();});
  on('submit',async()=>{if(sending||!canAnswer)return;sending=true;ack='';render();const stillCurrent=()=>pub?.state?.code===s.code&&pub?.state?.round===s.round&&pub?.state?.attempt===s.attempt;try{await api.answer(s.round,choice,spotlight&&s.targetUid===api.uid()?-1:prediction,targetFirst(s)?s.attempt:undefined);if(stillCurrent()){ownAnswer={choice,prediction,attempt:s.attempt};ack='已提交';}}catch(e){if(stillCurrent())ack='提交未成功，請檢查連線或截止時間。';throw e;}finally{sending=false;render();}});
@@ -163,7 +163,7 @@ function renderHost(){
   for(const id of ['cycleQuestions','cycleCount','saveSpotlight'])$(id).disabled=s.round>0||s.status!=='waiting';
   const next=nextSpotlight({public:pub}).id;
   $('rotationHint').textContent=s.completed?'本場已完成，心水清大師已公布。':`本場 ${s.questionsPerCycle*s.cycles} 題 · 已進行 ${s.status==='thinking'?s.round-1:s.round} 題 · ${s.targetName?'本題主角：'+s.targetName+' · ':''}下一題主角：${pub.members?.[next]?.name||'等待玩家加入'}。主角按入座順序輪換；開場後固定場次設定。`;
-  $('hiddenScores').innerHTML='<h2>主角隱藏分 · 僅主持人可見</h2><p class="hint">每人猜中加 1 被猜中分，猜錯加 1 未被猜中分；漏答不計，不影響心水清排行榜。</p>'+Object.entries(pub.members||{}).map(([id,m])=>{const p=privateRoom.spotlight?.players?.[id]||{};return `<div class="hidden-score-row"><b>${esc(m.name)}</b><span>主角 ${p.turns||0} 次</span><span>被猜中 ${p.guessed||0}</span><span>未被猜中 ${p.unguessed||0}</span></div>`;}).join('');
+  $('hiddenScores').innerHTML='<h2>主角統計 · 主持人明細</h2><p class="hint">每被猜錯 1 人，主角在「被誤會最深排行榜」加 1 分；漏答不計，不影響心水清排行榜。</p>'+Object.entries(pub.members||{}).map(([id,m])=>{const p=privateRoom.spotlight?.players?.[id]||{};return `<div class="hidden-score-row"><b>${esc(m.name)}</b><span>主角 ${p.turns||0} 次</span><span>被猜中 ${p.guessed||0}</span><span>未被猜中 ${p.unguessed||0}</span></div>`;}).join('');
  }
 
  for(const [id,field,label] of [['toggleChatEffects','chatEffects','聊天彈幕'],['toggleSubmitEffects','submitEffects','交卷彈幕']]){$(id).disabled=s.status==='ended';$(id).textContent=label+'：'+(s[field]===true?'開啟中':'已關閉');$(id).setAttribute('aria-pressed',String(s[field]===true));}
