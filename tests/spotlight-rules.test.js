@@ -5,6 +5,7 @@ import {initializeTestEnvironment,assertFails,assertSucceeds} from '@firebase/ru
 import {ref,set,get,update,serverTimestamp,runTransaction,onValue,goOffline,goOnline} from 'firebase/database';
 import {newRoom,startRound,settleRoom} from '../src/game.js';
 import {questions} from '../src/questions.js';
+import {endRoom} from '../src/end-room.js';
 let env;
 const db=(id,provider='anonymous')=>env.authenticatedContext(id,{firebase:{sign_in_provider:provider}}).database();
 const host=()=>db('host','password');
@@ -15,6 +16,17 @@ const reveal=async(h,round)=>{await update(ref(h,'room/public/state'),{status:'c
 before(async()=>{env=await initializeTestEnvironment({projectId:'demo-spotlight',database:{host:'127.0.0.1',port:9000,rules:readFileSync('database.rules.json','utf8')}});});
 after(async()=>env?.cleanup());
 beforeEach(async()=>{await env.clearDatabase();await env.withSecurityRulesDisabled(c=>set(ref(c.database()),{config:{hostUid:'host'},room:newRoom('GUESS1')}));});
+
+test('ending a room retries an empty host cache, preserves records and is idempotent',async()=>{
+ const h=host();
+ const cached=[];
+ const result=await runTransaction(ref(h,'room'),r=>{cached.push(r);return endRoom(r,'GUESS1');},{applyLocally:false});
+ assert.equal(cached[0],null);assert.ok(cached.length>=2);assert.equal(result.committed,true);
+ const ended=result.snapshot.val();assert.equal(ended.public.state.status,'ended');assert.equal(ended.public.state.locked,true);assert.equal(ended.public.state.chatOpen,false);
+ const repeated=await runTransaction(ref(h,'room'),r=>endRoom(r,'GUESS1'),{applyLocally:false});assert.deepEqual(repeated.snapshot.val(),ended);
+ const stale=await runTransaction(ref(h,'room'),r=>endRoom(r,'OTHER1'),{applyLocally:false});assert.equal(stale.committed,false);assert.deepEqual((await get(ref(h,'room'))).val(),ended);
+ await assertFails(runTransaction(ref(db('viewer'),'room'),r=>endRoom(r,'GUESS1'),{applyLocally:false}));
+});
 test('10 independent clients complete 30 rounds, identical broadcasts, no early disclosure or movement and idempotent awards',async()=>{
  const h=host(),clients=Array.from({length:10},(_,i)=>({id:`p${i}`,db:db(`p${i}`)}));
  // Sequential joins define the exact admission order; answers are concurrent.

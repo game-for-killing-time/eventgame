@@ -1,4 +1,5 @@
 import {isSpotlight,configureSpotlight,awardMasters} from './spotlight.js';
+import {endRoom} from './end-room.js';
 import {migrateAffinity} from './affinity.js';
 import {relayEffects} from './effects.js';
 import {config} from '../config.js';
@@ -39,7 +40,7 @@ export async function connect(role,onConnection) {
  if(action==='configure'){const result=await d.runTransaction(ref('room'),r=>r?configureSpotlight(r,value):null,{applyLocally:false});if(!result.committed)throw Error('請先建立房間。');return;}
  if(action==='start'){const expected=await get('room/public/state');const result=await d.runTransaction(ref('room'),r=>{if(!r)return null;if(r.public.state.code!==expected?.code||r.public.state.round!==expected.round)return; r.public.state=startRound(r,value,api.now());delete r.public.story;return r;},{applyLocally:false});if(!result.committed)throw Error('房間已變更，請確認目前題目。');return;}
  if(action==='close'||action==='extend'){const expected=value||await get('room/public/state');await d.runTransaction(ref('room/public/state'),s=>{if(!s)return null;if(s.code!==expected.code||s.round!==expected.round||s.status!=='open'||(action==='extend'&&s.deadline<=api.now())) return;return {...s,...(action==='close'?{status:'closed'}:{deadline:s.deadline+15000})};},{applyLocally:false});return;}
- if(action==='end'){await d.runTransaction(ref('room'),r=>{if(!r)return;Object.assign(r.public.state,{status:'ended',locked:true,chatOpen:false});return awardMasters(r);},{applyLocally:false});return;}
+ if(action==='end'){const expected=await get('room/public/state');if(!expected)throw Error('目前沒有房間可結束。');const result=await d.runTransaction(ref('room'),r=>endRoom(r,expected.code),{applyLocally:false});if(!result.committed||result.snapshot.val()?.public?.state?.status!=='ended')throw Error('房間已變更，請重新確認後再結束。');return;}
  if(action==='lock'||action==='chatOpen'){await d.set(ref(`room/public/state/${action==='lock'?'locked':'chatOpen'}`),value);return;}
  if(action==='mute'){await d.update(ref('room'),{[`moderation/${value.uid}/muted`]:value.muted,...(value.muted?{[`effects/chat/${value.uid}`]:null}:{})});return;}
  if(action==='remove'){const m=await get(`room/public/members/${value}`);await d.update(ref('room'),{[`moderation/${value}/removed`]:true,[`public/members/${value}`]:null,[`public/island/positions/${value}`]:null,[`effects/chat/${value}`]:null,[`effects/submissions/items/${value}`]:null,...(m?.seat!==undefined?{[`public/seats/${m.seat}`]:null}:{})});return;}
