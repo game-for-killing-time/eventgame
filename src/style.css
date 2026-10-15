@@ -246,8 +246,10 @@ header nav{font-size:13px;gap:20px}
 .viewer #joinForm button:hover{background:#18533f}
 .viewer #joinForm .hint{font-size:12px;color:#fff0d6;margin:14px 0 0;text-align:center;line-height:1.6}
 .viewer:not(.in-room) #notice{width:min(100%,420px);align-self:flex-end}
-.viewer.in-room header .brand{display:none}
-.viewer.in-room header{padding:10px 16px 0}
+.viewer.in-room header .brand{display:inline-flex}
+.viewer.in-room header{width:100%;max-width:900px;margin-inline:auto;padding:18px 24px 4px}
+.viewer.in-room .brand-logo{width:190px;height:auto}
+@media(max-width:650px){.viewer.in-room header{padding:16px 12px 4px}.viewer.in-room .brand-logo{width:150px}}
 @media(max-width:650px){.viewer:not(.in-room){background-position:36% center}.viewer:not(.in-room)::before{background:#211b1338}.viewer:not(.in-room) header{padding:22px 22px 8px}.viewer:not(.in-room) .brand-logo{width:138px;height:66px}.viewer:not(.in-room) main{padding:18px 20px 32px}.viewer #entry{justify-content:center;align-items:center}.viewer #entry #joinForm{padding:28px 24px;background:#241b168c}.viewer #joinForm .join-title{font-size:32px}.viewer:not(.in-room) #notice{align-self:center}}
 @media(max-height:600px){.viewer:not(.in-room) header{padding-top:12px}.viewer:not(.in-room) main{padding-top:8px;padding-bottom:20px}.viewer #entry #joinForm{padding:24px}.viewer #joinForm .join-intro{margin-bottom:16px}}
 /* Broadcast play scene: readable question stage over the same evening island. */
