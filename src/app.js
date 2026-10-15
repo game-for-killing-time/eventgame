@@ -1,6 +1,7 @@
 import {voteStack,createVoterDialog} from './voter-view.js';
 import {createEffects} from './effects-view.js';
 import {createInvite} from './invite.js';
+import {renderDisplayWelcome} from './display-welcome.js';
 import {createIsland} from './island-view.js';
 import {pairStats,qualifies} from './affinity.js';
 import {connect} from './backend.js';
@@ -32,7 +33,8 @@ ${role==='host'?'<section id="affinityPanel" class="panel" hidden><h2>島民默�
 </main>${role==='viewer'?'':'<footer><span>選擇沒有標準答案，也不是人格測驗。</span><a id="twitch" target="_blank" rel="noopener">回到 Twitch ↗</a></footer>'}`;
 const updateVoterDialog=role==='viewer'?createVoterDialog($('game'),()=>pub?.state?({...pub.state,result:pub.results?.[pub.state.round],members:pub.members||{},uid:api?.uid(),options:pub.state.question?.options||[]}):null):()=>{};
 if(role==='viewer')document.querySelector('main').after($('islandArea'));
-const updateIsland=role==='viewer'?createIsland($('islandArea')):()=>{};
+if(role==='display'){const area=document.createElement('section');area.id='islandArea';area.hidden=true;document.querySelector('main').after(area);}
+const updateIsland=role==='viewer'||role==='display'?createIsland($('islandArea'),{spectator:role==='display'}):()=>{};
 const updateInvite=role==='host'?createInvite($('inviteTools')):()=>{};
 let updateEffects=()=>{}; const relayed=new Set();let relayWarningAt=0;
 function relayOnce(key,value){if(relayed.has(key))return;relayed.add(key);if(relayed.size>500)relayed.delete(relayed.values().next().value);api.command('relayEffects',value).catch(e=>{relayed.delete(key);if(Date.now()-relayWarningAt>30000){relayWarningAt=Date.now();notice('彈幕轉送失敗，請確認連線與主持人權限。'+friendly(e),true);}});}
@@ -73,11 +75,12 @@ function entry(){
 function eligible(){return role==='viewer'&&pub?.members?.[api.uid()]&&savedCode===pub?.state?.code&&!moderation.removed;}
 function render(){
  const s=pub?.state,joined=eligible();entry();updateVoterDialog();
+ if(role==='display'){$('islandArea').hidden=!s;document.body.classList.toggle('display-in-room',!!s);if(s)updateIsland(pub,null);}
  updateEffects(pub,role==='display'||joined);
  if(role==='host')updateInvite({url:s?new URL(link('index',s.code),location.href).href:'',available:hostReady&&!!s&&s.status!=='ended',demo:explicitDemo||!config.firebase,local:['localhost','127.0.0.1'].includes(location.hostname),locked:s?.locked});
  if(role==='host'&&!s){const m=document.querySelector('.room-management');m.open=false;m.dataset.roomState='';m.querySelector('summary').textContent='房間管理與登出';}
  if(role==='viewer'){for(const id of ['viewerStatus','playerTabs','chatEntry','islandArea'])$(id).hidden=!joined;document.body.classList.toggle('in-room',!!joined);if(joined){$('viewerStatus').innerHTML=`<span class="viewer-identity"><span class="player-avatar">${characterMarkup(characterId(api.uid(),s.code))}</span><b>${esc(pub.members[api.uid()].name)}</b></span>`;updateIsland(pub,api.uid());}}
- if(!s){if($('affinityPanel')){$('affinityPanel').hidden=true;$('affinityRows').textContent='';}replace('game','<div class="empty"><span class="big-mark">◒</span><h1>小桌還沒開場</h1><p>主持人開好房間後，就可以一起入座。</p></div>');if($('social'))$('social').hidden=true;if(hostReady){for(const id of ['lock','toggleChat','toggleChatEffects','toggleSubmitEffects','end','clean','start','extend','close','reveal'])$(id).disabled=true;$('submitted').textContent='等待開場';$('roomLinks').innerHTML='<b>還沒有房間</b><span>建立房間後，邀請朋友入座。</span>';$('hostGuide').textContent='先建立房間，再選一道暖場題。';$('members').textContent='';$('stories').textContent='';}return;}
+ if(!s){if($('affinityPanel')){$('affinityPanel').hidden=true;$('affinityRows').textContent='';}if(role==='display')renderDisplayWelcome($('game'),new URL(link('index'),location.href).href);else replace('game','<div class="empty"><span class="big-mark">◒</span><h1>小桌還沒開場</h1><p>主持人開好房間後，就可以一起入座。</p></div>');if($('social'))$('social').hidden=true;if(hostReady){for(const id of ['lock','toggleChat','toggleChatEffects','toggleSubmitEffects','end','clean','start','extend','close','reveal'])$(id).disabled=true;$('submitted').textContent='等待開場';$('roomLinks').innerHTML='<b>還沒有房間</b><span>建立房間後，邀請朋友入座。</span>';$('hostGuide').textContent='先建立房間，再選一道暖場題。';$('members').textContent='';$('stories').textContent='';}return;}
  const result=pub.results?.[s.round], isOpen=s.status==='open'&&api.now()<s.deadline, count=Object.keys(pub.members||{}).length;
  const canAnswer=joined&&isOpen;
  const board=leaderboard(pub.results,pub.members);

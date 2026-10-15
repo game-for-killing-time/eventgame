@@ -1,7 +1,7 @@
 import {characterId,characterMarkup} from './characters.js';
 import {islandLayout} from './affinity.js';
 const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-export function createIsland(container){
+export function createIsland(container,{spectator=false}={}){
  container.innerHTML='<div class="island-heading"><h2>島民散步中</h2></div><div class="island-scroll" tabindex="0" role="region" aria-label="島民散步區，可左右滑動"><div class="island-world"></div></div>';
  const world=container.querySelector('.island-world'),scroll=container.querySelector('.island-scroll');let self=null,visible=false,code=null,centerPending=true;
  const motionQuery=matchMedia('(prefers-reduced-motion: reduce)');
@@ -10,6 +10,16 @@ export function createIsland(container){
  const pause=()=>container.classList.toggle('motion-paused',!visible||document.hidden);
  new IntersectionObserver(entries=>{visible=entries[0].isIntersecting;pause();centerSelf();},{threshold:0.05}).observe(container);
  document.addEventListener('visibilitychange',pause);
+ // Slowly tour the full roster on unattended livestreams; manual scrolling remains available.
+ if(spectator){let direction=1,restUntil=0,last=0;
+  scroll.addEventListener('pointerdown',()=>{restUntil=performance.now()+10000;});
+  scroll.addEventListener('wheel',()=>{restUntil=performance.now()+10000;},{passive:true});
+  scroll.addEventListener('keydown',()=>{restUntil=performance.now()+10000;});
+  const tour=now=>{const elapsed=Math.min(now-last,50);last=now;
+   if(visible&&!document.hidden&&!container.hidden&&!motionQuery.matches&&now>restUntil){const max=scroll.scrollWidth-scroll.clientWidth;if(max>0){scroll.scrollLeft+=direction*elapsed*.035;if(scroll.scrollLeft>=max-1||scroll.scrollLeft<=0){direction*=-1;restUntil=now+2500;}}}
+   requestAnimationFrame(tour);
+  };requestAnimationFrame(tour);
+ }
  function centerSelf(){if(!visible||!centerPending)return;const node=[...world.children].find(n=>n.dataset.uid===self);if(!node)return;scroll.scrollTo({left:Math.max(0,Number(node.dataset.x)-scroll.clientWidth/2+41),behavior:'instant'});centerPending=false;}
  return (pub,uid)=>{
   self=uid;if(code!==pub.state.code){world.replaceChildren();code=pub.state.code;centerPending=true;}
