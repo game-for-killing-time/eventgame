@@ -1,8 +1,32 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {tally,leaderboard,newRoom,startRound,settleRoom,publishRevealedChoices} from '../src/game.js';
-import {questions} from '../src/questions.js';
-test('30 valid four-choice questions',()=>{assert.equal(questions.length,30);for(const q of questions)assert.equal(q.options.length,4);});
+import {questions,questionCategories,filterQuestions} from '../src/questions.js';
+import {chooseQuestion} from '../src/question-picker.js';
+
+test('filtered picker preserves visible selection, suggests unused IDs and never selects a hidden question',()=>{
+ const list=filterQuestions({category:'food'}),first=list[0],second=list[1];
+ assert.equal(chooseQuestion(list,second.id),second.id);
+ assert.equal(chooseQuestion(list,'q1'),first.id);
+ assert.equal(chooseQuestion(list,first.id,new Set([first.id]),true),second.id);
+ assert.equal(chooseQuestion([],first.id),'');
+ assert.equal(chooseQuestion(list,second.id,new Set(list.map(q=>q.id)),true),first.id);
+});
+test('1000 complete questions have stable IDs, balanced categories and distinct options',()=>{
+ assert.equal(questions.length,1000);
+ assert.deepEqual(questions.map(q=>q.id),Array.from({length:1000},(_,i)=>`q${i+1}`));
+ const normalized=s=>s.normalize('NFKC').replace(/[\p{P}\s]/gu,'');
+ assert.equal(new Set(questions.map(q=>normalized(q.text))).size,1000);
+ for(const category of questionCategories)assert.equal(filterQuestions({category:category.id}).length,100,category.id);
+ for(const q of questions){assert.equal(q.options.length,4,q.id);assert.equal(new Set(q.options.map(normalized)).size,4,q.id);assert.ok(q.followUp.trim(),q.id);assert.ok(q.text.length<=90,q.id);assert.ok(q.options.every(o=>o.trim()&&o.length<=35),q.id);assert.ok(!/[\u200B-\u200D\uFEFF]/.test(q.text+q.options.join('')+q.followUp),q.id);}
+});
+test('question search combines category and all search terms, including discussion prompts',()=>{
+ const results=filterQuestions({category:'travel',search:'迷路'});assert.ok(results.length);assert.ok(results.every(q=>q.category==='travel'));
+ assert.ok(filterQuestions({search:'再五分鐘'}).some(q=>q.id==='q1'));
+ assert.deepEqual(filterQuestions({search:'不存在的題目xyz'}),[]);
+ assert.deepEqual(filterQuestions({category:'missing'}),[]);
+ const q=questions[0];assert.ok(filterQuestions({search:'鬧鐘 手機'}).includes(q));
+});
 test('ties award any winning prediction; zero votes award nothing',()=>{assert.deepEqual(tally({a:{choice:0,prediction:1},b:{choice:1,prediction:0},c:{choice:2,prediction:3}}),{counts:[1,1,1,0],total:3,winners:[0,1,2],points:{a:1,b:1,c:0}});assert.deepEqual(tally(),{counts:[0,0,0,0],total:0,winners:[],points:{}});});
 test('full round and idempotent settlement, stale retry cannot affect next round',()=>{const r=newRoom('PARTY1','legacy');r.public.members={a:{name:'甲'},b:{name:'乙'}};r.public.state=startRound(r,questions[0],1000);r.answers[1]={a:{choice:0,prediction:0},b:{choice:1,prediction:0}};r.public.state.status='closed';settleRoom(r,1);settleRoom(r,1);assert.deepEqual(leaderboard(r.public.results,r.public.members).map(x=>x.score),[1,1]);r.public.state=startRound(r,questions[1],10000);assert.equal(settleRoom(r,1),undefined);assert.equal(r.public.state.round,2);assert.throws(()=>startRound(r,questions[2],12000));});
 

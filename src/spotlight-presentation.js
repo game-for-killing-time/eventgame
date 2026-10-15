@@ -23,7 +23,7 @@ export function revealRemaining(pub,now){
 export function revealSummary(s,result,members={}){
  const targetId=result.targetUid||s.targetUid,name=result.targetName||s.targetName||'主角';
  const winners=result.targetAnswered?Object.keys(result.points||{}).filter(id=>id!==targetId&&result.points[id]===1).sort((a,b)=>Number(members[a]?.seat??99)-Number(members[b]?.seat??99)||a.localeCompare(b)):[];
- const prompt=String(s.question?.text||'主角選擇了').replaceAll('你',name).replace(/[⋯…?？:：]+$/u,'');
+ const prompt=String(s.question?.text||'主角的選擇');
  return `<div class="reveal-hero">${characterMarkup(characterId(targetId,s.code),true)}<span>本題主角 <b>${esc(name)}</b></span></div><div class="reveal-answer">${result.targetAnswered?`<p class="reveal-sentence">${esc(prompt)}</p><strong class="reveal-choice">${esc(s.question?.options?.[result.targetChoice]??'')}</strong>`:'<p class="reveal-sentence">主角本題沒有有效作答，這題不計分。</p>'}</div><section class="reveal-winners" aria-label="猜中主角的玩家"><h3>共 ${winners.length} 人答對${winners.length?'！':' · 下題再猜猜'}</h3><div class="reveal-crew">${winners.map(id=>`<span class="reveal-player">${characterMarkup(characterId(id,s.code))}<b>${esc(members[id]?.name||'已離席玩家')}</b></span>`).join('')}</div></section>`;
 }
 

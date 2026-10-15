@@ -97,3 +97,46 @@
  .reveal-popup-card .reveal-player{width:52px}.reveal-popup-card .reveal-player .character{width:32px;height:36px}.reveal-popup-card .reveal-player b{font-size:11px}
  .reveal-popup-card .reveal-popup-hint{grid-column:1/-1;margin:0;font-size:11px}
 }
+/* Keep both answer perspectives readable on phones as well as desktop. */
+.viewer.in-room .spotlight-question .predictions{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.viewer.in-room .spotlight-question .prediction{display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;justify-content:flex-start;gap:10px;padding:12px;min-height:62px}
+.viewer.in-room .spotlight-question .prediction span{display:block;width:auto;min-width:0;font-size:15px;line-height:1.5;overflow-wrap:anywhere;text-align:left}
+.viewer.in-room .spotlight-question .prediction b{flex-shrink:0}
+.question-perspective{font-size:14px;line-height:1.6;opacity:.9;margin:0 0 16px}
+.question-discussion{margin-top:18px;padding:14px 18px;border-left:3px solid #e5c176;background:#ffffff0d;border-radius:0 12px 12px 0}
+.question-discussion h3{font-size:14px;margin:0 0 6px;color:#f6d999}
+.question-discussion p{margin:0;line-height:1.6;font-size:18px;overflow-wrap:anywhere}
+.question-discussion small{display:block;margin-top:6px;opacity:.75}
+@media(max-width:380px){.viewer.in-room .spotlight-question .predictions{grid-template-columns:1fr}}
+.bank-filters{display:grid;grid-template-columns:minmax(130px,1fr) minmax(180px,2fr);gap:12px;margin:14px 0}
+.bank-filters label{display:flex;flex-direction:column;gap:6px;min-width:0}
+.bank-filters input,.bank-filters select{width:100%;min-width:0}
+.bank-preview{margin:10px 0 18px;padding:12px;border:1px solid #cbbd9c;border-radius:10px}
+.bank-preview summary{cursor:pointer;font-weight:700}
+.bank-preview li{padding:4px 0}.bank-preview p{line-height:1.6}
+@media(max-width:600px){.bank-filters{grid-template-columns:1fr}}
+/* Reserve room for the discussion prompt after a full-table reveal. */
+@media(min-width:900px){
+ .display.display-in-room .question.spotlight-summary{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto auto minmax(0,1fr) auto;gap:6px;align-content:start}
+ .display.display-in-room .spotlight-summary>.section-title{grid-column:1;margin:0;align-self:center}
+ .display.display-in-room .spotlight-summary>.reveal-waiting-label{grid-column:2;margin:0;padding:4px 10px;font-size:13px}
+ .display.display-in-room .spotlight-summary>.reveal-hero{grid-column:1/-1;flex-direction:row;margin:0;gap:10px}
+ .display.display-in-room .spotlight-summary .reveal-hero>.character{width:36px;height:40px}
+ .display.display-in-room .spotlight-summary>.reveal-answer{grid-column:1/-1;padding:8px 14px}
+ .display.display-in-room .spotlight-summary>.reveal-winners{grid-column:1/-1;min-height:0;overflow:auto;scrollbar-width:none}
+ .display.display-in-room .spotlight-summary>.reveal-winners::-webkit-scrollbar{display:none}
+ .display.display-in-room .spotlight-summary .reveal-winners h3{margin:0 0 4px;font-size:16px}
+ .display.display-in-room .spotlight-summary>.question-discussion{grid-column:1/-1;margin:0;padding:6px 12px;text-align:center}
+ .display.display-in-room .spotlight-summary .question-discussion h3{margin:0 0 2px;font-size:12px}
+ .display.display-in-room .spotlight-summary .question-discussion p{font-size:17px;line-height:1.4}
+ .display.display-in-room .spotlight-summary .question-discussion small{margin-top:2px;font-size:11px}
+}
+@media(min-width:900px) and (max-height:800px){
+ .display.display-in-room .question.spotlight-summary{padding:10px 20px;gap:4px}
+ .display.display-in-room .spotlight-summary .reveal-sentence{font-size:22px;line-height:1.4}
+ .display.display-in-room .spotlight-summary .reveal-choice{font-size:28px}
+ .display.display-in-room .spotlight-summary .reveal-crew{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px 8px}
+ .display.display-in-room .spotlight-summary .reveal-player{width:auto;min-width:0;gap:2px}
+ .display.display-in-room .spotlight-summary .reveal-player b{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .display.display-in-room .spotlight-summary .reveal-player .character{width:28px;height:28px}
+}

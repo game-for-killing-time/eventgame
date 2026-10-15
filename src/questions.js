@@ -1,32 +1,18 @@
-export const questions = [
- ['鬧鐘響了，你通常會…',['立即起床','再睡五分鐘','設了十個鬧鐘','醒了，但不想離開床']],
- ['薯條來了，你的番茄醬放哪裡？',['直接淋上去','擠旁邊慢慢蘸','我吃原味','我想要其他醬']],
- ['突然多出一個不用上班的下午，你會…',['睡一場好覺','出去隨便逛逛','打開遊戲','找朋友吃東西']],
- ['看劇看到最緊張的地方，你會…',['一口氣追完','先查結局','留到明天','找人一起尖叫']],
- ['朋友說「隨便吃」，你第一個提議是…',['火鍋','茶餐廳','壽司','先買杯飲料再想']],
- ['出門旅行，你的行李通常…',['清單打勾，整齊收好','出門前才塞進去','帶到像要搬家','輕裝上陣再算']],
- ['洗澡時突然想起一件糗事，你會…',['大叫一聲','假裝沒發生','重新演練完美回應','洗完就跟朋友分享']],
- ['遊戲裡拿到稀有道具，你會…',['馬上用掉','留到最後都沒用','先研究最佳用法','拿去跟朋友炫耀']],
- ['下雨天最適合配甚麼聲音？',['輕音樂','遊戲音效','朋友聊天','只聽雨聲']],
- ['聚餐最後一塊炸雞，你會…',['問完就吃','等待勇者','切開大家分','其實我已經吃飽']],
- ['如果有一天能跟一種動物聊天，你選…',['貓，問牠在想甚麼','狗，聽牠誇我','鳥，問天空的事','水豚，學放鬆']],
- ['半夜肚子餓，你的選擇是…',['煮泡麵','翻冰箱','叫外送','喝水，試著睡覺']],
- ['如果有一年可以放慢生活，而且基本開支已有保障，你最想…',['學一門一直想學的技能','去不同地方住一陣子','多陪伴重要的人','讓自己好好休息']],
- ['選一份新工作，待遇相近時，你最重視…',['時間自由、有自己的生活','工作內容讓我有興趣','同事和相處氣氛','穩定、有清楚的成長路線']],
- ['突然收到一筆額外的獎金，你會先…',['存起來，增加安全感','買一件想很久的東西','安排一次體驗或旅行','請重要的人吃一頓']],
- ['如果要搬到新地方，你最捨不得原本的…',['熟悉的朋友與鄰居','每天順手的生活路線','有回憶的小店和角落','住習慣的房間']],
- ['想開始一個新興趣，你通常會…',['先看教學，做點功課','直接試一次再說','找朋友一起開始','先買一份簡單的入門材料']],
- ['如果只能保留一種週末活動，你選…',['和朋友聚會聊天','一個人慢慢做喜歡的事','到戶外走走或運動','在家看作品、玩遊戲']],
- ['有一個機會很吸引，但需要離開熟悉的環境，你會先…',['了解最壞情況與後路','想想自己最想得到甚麼','跟信任的人談談','試著短期體驗再決定']],
- ['朋友邀你一起做一個長期計畫，你最先想知道…',['每個人想達成甚麼','每週需要投入多少時間','大家如何分工','能不能先做一小段試試']],
- ['回看過去，你比較想再體驗哪種時刻？',['和朋友笑到停不下來','終於完成一件難事','第一次走進陌生地方','普通但安心的一天']],
- ['如果能送未來的自己一樣東西，你會選…',['一封現在寫的信','一段和朋友的錄音','一本生活照片集','一份還沒完成的願望清單']],
- ['你會想把房間布置成哪種感覺？',['明亮簡單，東西收好','溫暖柔和，抱枕很多','有個性，擺滿喜歡的收藏','自然舒服，放些植物']],
- ['去沒吃過的餐廳，你通常先看…',['大家推薦的招牌','自己熟悉的安全選擇','最少見、最想試的菜','可以跟朋友分著吃的組合']],
- ['挑一首今晚回家路上的歌，你想聽…',['可以跟著唱的熟悉旋律','安靜放鬆的輕音樂','節奏強一點，繼續嗨','先聽朋友推薦的歌']],
- ['看一部作品，你最容易被甚麼吸引？',['角色之間的關係','意想不到的故事走向','畫面、聲音和整體氣氛','看完還會想的問題']],
- ['假日只有兩小時空檔，你會拿來…',['讀書、畫畫或做手作','運動或散步','練習遊戲或某項技能','去附近找點好吃的']],
- ['朋友送禮物給你，你比較喜歡…',['剛好實用、每天用得上','帶著共同回憶的小東西','自己沒試過的新體驗','讓我自己挑選的心意']],
- ['遇到喜歡的新作品，你會…',['馬上找朋友分享','自己先完整看完再聊','找更多創作背景與細節','收藏起來，留個好時間慢慢看']],
- ['理想的一次小旅行，最不能少的是…',['有彈性，可以臨時改行程','幾個特別想去的重點','舒服的住宿與好吃的東西','一起去的人合得來']]
-].map(([text,options],i)=>({id:`q${i+1}`,text,options}));
+import {originalQuestions} from './question-bank/original.js';
+import {routineQuestions} from './question-bank/routine.js';
+import {foodQuestions} from './question-bank/food.js';
+import {travelQuestions} from './question-bank/travel.js';
+import {digitalQuestions} from './question-bank/digital.js';
+import {socialQuestions} from './question-bank/social.js';
+import {valuesQuestions} from './question-bank/values.js';
+import {newthingsQuestions} from './question-bank/newthings.js';
+import {leisureQuestions} from './question-bank/leisure.js';
+import {tasteQuestions} from './question-bank/taste.js';
+import {imaginationQuestions} from './question-bank/imagination.js';
+export const questionCategories=[['routine','日常小習慣','日常暖場'],['food','吃喝與聚餐','日常暖場'],['travel','出門與旅行','日常暖場'],['digital','手機與數碼生活','日常暖場'],['social','朋友與團體相處','生活取捨'],['values','時間金錢與選擇','生活取捨'],['newthings','新挑戰與突發狀況','生活取捨'],['leisure','休閒與興趣','興趣品味'],['taste','品味與收藏','興趣品味'],['imagination','回憶與腦洞','興趣品味']].map(([id,name,group])=>({id,name,group}));
+// Existing room snapshots keep their original wording; IDs remain stable.
+export const questions=[...originalQuestions,...routineQuestions,...foodQuestions,...travelQuestions,...digitalQuestions,...socialQuestions,...valuesQuestions,...newthingsQuestions,...leisureQuestions,...tasteQuestions,...imaginationQuestions];
+export function filterQuestions({category='',search=''}={}){
+ const terms=search.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
+ return questions.filter(q=>(!category||q.category===category)&&terms.every(t=>`${q.text} ${q.options.join(' ')} ${q.followUp}`.toLocaleLowerCase().includes(t)));
+}

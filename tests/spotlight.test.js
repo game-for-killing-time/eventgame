@@ -49,8 +49,8 @@ import {spotlightQuestion} from '../src/spotlight-view.js';
 import {countdown,revealSummary,revealRemaining,REVEAL_MS} from '../src/spotlight-presentation.js';
 test('player markup has target-only choice form, guesser dual form and real revealed result without private counters',()=>{
  const r=room(2),s=open(r),props={s,pub:r.public,role:'viewer',uid:'p0',joined:true,canAnswer:true,choice:null,prediction:null};
- let html=spotlightQuestion(props);assert.ok(html.includes(questions[0].text.replaceAll('你','玩家0')));assert.ok(html.includes('name="choice"'));assert.ok(!html.includes('name="prediction"'));assert.ok(html.includes('提交我的答案'));
- html=spotlightQuestion({...props,uid:'p1'});assert.ok(html.includes('name="prediction"'));assert.ok(html.includes('你猜 玩家0，他會怎樣選？'));assert.ok(html.indexOf('name="prediction"')<html.indexOf('name="choice"'));
+ let html=spotlightQuestion(props);assert.ok(html.includes(questions[0].text));assert.ok(html.includes('name="choice"'));assert.ok(!html.includes('name="prediction"'));assert.ok(html.includes('提交我的答案'));
+ html=spotlightQuestion({...props,uid:'p1'});assert.ok(html.includes('name="prediction"'));assert.ok(html.includes('① 猜主角：玩家0 會選哪項？'));assert.ok(html.indexOf('name="prediction"')<html.indexOf('name="choice"'));
  reveal(r,{p0:{choice:1,prediction:-1},p1:{choice:1,prediction:1}});html=spotlightQuestion({...props,uid:'p1',result:r.public.results[1]});assert.ok(html.includes('你猜中了'));assert.ok(html.includes('再睡五分鐘'));assert.ok(!html.includes('name="prediction"'));assert.ok(!html.includes('未被猜中'));
 });
 
@@ -72,7 +72,7 @@ test('thinking screens hide choices from guessers and display; target sees a sin
  for(const role of ['viewer','display']){const h=spotlightQuestion({...props,role});assert.ok(h.includes('玩家0正在思考'));assert.ok(!h.includes('name="choice"'));assert.ok(!h.includes('name="prediction"'));}
  const h=spotlightQuestion({...props,uid:'p0',canAnswer:true});assert.ok(h.includes('name="choice"'));assert.ok(!h.includes('name="prediction"'));assert.ok(h.includes('答案會鎖定'));
  s.status='open';const locked=spotlightQuestion({...props,uid:'p0',ownSubmitted:true});assert.ok(locked.includes('答案已鎖定'));assert.ok(!locked.includes('更新我的答案'));
- const guessing=spotlightQuestion({...props,canAnswer:true});assert.ok(guessing.includes('他會吃原味'));assert.ok(!guessing.includes('<span>我吃原味</span></label></div></fieldset><fieldset'));
+ const guessing=spotlightQuestion({...props,canAnswer:true});assert.ok(guessing.includes('猜 玩家0：C · 我吃原味'));assert.ok(guessing.includes('自己的答案：C · 我吃原味'));
 });
 
 
@@ -115,8 +115,16 @@ test('reveal clock is idempotent, expires across clients and reloads, never expo
 test('reveal summary shows actual target choice and correct guessers, not everyone choosing same answer; names are escaped',()=>{
  const r=room(4),s=open(r);s.targetName='<img onerror=x>';r.public.members.p1.name='<script>bad</script>';
  reveal(r,{p0:{choice:2,prediction:-1},p1:{choice:0,prediction:2},p2:{choice:2,prediction:0},p3:{choice:3,prediction:2}});
- const result=r.public.results[1],h=revealSummary(s,result,r.public.members);assert.ok(h.includes('共 2 人答對'));assert.ok(h.includes('設了十個鬧鐘'));assert.ok(h.includes('&lt;script&gt;bad&lt;/script&gt;'));assert.ok(!h.includes('<script>'));assert.ok(!h.includes('玩家2'));assert.ok(h.includes('玩家3'));
+ const result=r.public.results[1],h=revealSummary(s,result,r.public.members);assert.ok(h.includes('共 2 人答對'));assert.ok(h.includes('留在床上看手機'));assert.ok(h.includes('&lt;script&gt;bad&lt;/script&gt;'));assert.ok(!h.includes('<script>'));assert.ok(!h.includes('玩家2'));assert.ok(h.includes('玩家3'));
  const player=spotlightQuestion({s,result,pub:r.public,role:'viewer',uid:'p1',joined:true});assert.ok(player.includes('等待主持人開始下一題'));assert.ok(!player.includes('class="options'));assert.ok(player.includes('你猜中了'));
  const missing=revealSummary(s,{...result,targetAnswered:false},r.public.members);assert.ok(missing.includes('共 0 人答對'));assert.ok(missing.includes('沒有有效作答'));
  s.completed=true;const last=spotlightQuestion({s,result,pub:r.public,role:'display'});assert.ok(last.includes('本場完成'));assert.ok(!last.includes('等待主持人開始下一題'));
+});
+test('perspectives preserve neutral stems and options; discussion appears only after reveal and is escaped',()=>{
+ const r=room(2),s=open(r);s.targetName='你你<朋友>';s.question={...questions[0],followUp:'聊聊 <script>故事</script>'};
+ const props={s,pub:r.public,role:'viewer',uid:'p1',joined:true,canAnswer:true,choice:null,prediction:null};
+ const h=spotlightQuestion(props);assert.ok(h.includes(questions[0].text));assert.ok(h.includes('猜主角：你你&lt;朋友&gt;'));assert.ok(h.includes('自己的答案：如果是你'));assert.ok(!h.includes('揭曉後聊聊'));assert.ok(!h.includes('聊聊 &lt;script&gt;'));
+ reveal(r,{p0:{choice:0,prediction:-1},p1:{choice:1,prediction:0}});
+ for(const role of ['viewer','display','host']){const out=spotlightQuestion({...props,role,result:r.public.results[1]});assert.ok(out.includes('揭曉後聊聊'));assert.ok(out.includes('聊聊 &lt;script&gt;故事&lt;/script&gt;'));assert.ok(!out.includes('<script>'));}
+ delete s.question.followUp;assert.ok(!spotlightQuestion({...props,result:r.public.results[1]}).includes('question-discussion'));
 });
