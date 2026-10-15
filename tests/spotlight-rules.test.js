@@ -37,8 +37,8 @@ test('10 independent clients complete 30 rounds, identical broadcasts, no early 
   await start(h,questions[round-1]);const state=(await get(ref(h,'room/public/state'))).val();assert.equal(state.targetUid,`p${(round-1)%10}`);
   const island=(await get(ref(display,'room/public/island'))).val();
   await Promise.all(clients.map((c,i)=>submit(c.db,c.id,round,i%4,c.id===state.targetUid?-1:((round-1)%10)%4)));
-  // Overwrite rather than duplicate, with a target who cannot score a self-guess.
-  await submit(clients[(round-1)%10].db,state.targetUid,round,((round-1)%10)%4,-1);
+  // Target submissions are immutable, including duplicate clicks.
+  await assertFails(submit(clients[(round-1)%10].db,state.targetUid,round,((round-1)%10)%4,-1));
   assert.equal((await get(ref(display,`room/public/results/${round}`))).exists(),false);assert.deepEqual((await get(ref(display,'room/public/island'))).val(),island);
   await reveal(h,round);const expected=(await get(ref(h,'room'))).val();await Promise.all([reveal(h,round),reveal(h,round)]);assert.deepEqual((await get(ref(h,'room'))).val(),expected);
   for(const c of clients)assert.deepEqual((await get(ref(c.db,`room/public/results/${round}`))).val(),expected.public.results[round]);

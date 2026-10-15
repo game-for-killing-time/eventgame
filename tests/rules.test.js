@@ -22,7 +22,7 @@ test('10 independent clients join, synchronize, submit, overwrite and score once
  await Promise.all(clients.map((c,i)=>assertSucceeds(join(c.db,c.id,String(i)))));
  assert.equal((await get(ref(host(),'room/public/members'))).size,10);
  await Promise.all(clients.map((c,i)=>submit(c.db,c.id,i%4,0)));
- await Promise.all(clients.map(c=>submit(c.db,c.id,0,0)));
+ await Promise.all(clients.filter((c,i)=>i%4!==0).map(c=>set(ref(c.db,`room/answers/1/${c.id}`),{choice:0,prediction:0,revision:1,at:serverTimestamp()})));
  const h=host();await update(ref(h,'room/public/state'),{status:'closed'});
  const answers=(await get(ref(h,'room/answers/1'))).val();assert.equal(Object.keys(answers).length,10);
  const settle=()=>runTransaction(ref(h,'room/public'),p=>p?settleRoom({public:p,answers:{1:answers}},1)?.public:null,{applyLocally:false});
@@ -149,6 +149,6 @@ test('host relay transactions deliver chat and first submission to independent c
  const expected=(await get(ref(display,'room/effects/submissions'))).val();
  assert.deepEqual(Object.keys(expected.items),['a']);
  for(const c of [a,display])assert.equal((await get(ref(c,'room/effects/chat/a/text'))).val(),'new message');
- await submit(a,'a',0,3);await relay('submissions');assert.deepEqual((await get(ref(display,'room/effects/submissions'))).val(),expected);
+ await set(ref(a,'room/answers/1/a'),{choice:0,prediction:3,revision:1,at:serverTimestamp()});await relay('submissions');assert.deepEqual((await get(ref(display,'room/effects/submissions'))).val(),expected);
  await assertFails(set(ref(a,'room/effects/submissions/items/a'),0));
 });

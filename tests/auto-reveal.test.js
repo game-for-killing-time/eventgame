@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {newRoom,startRound,settleRoom} from '../src/game.js';
 import {activateGuesses} from '../src/spotlight.js';
 import {autoRevealReason,autoRevealRound} from '../src/auto-reveal.js';
+import {answerEditable,nextRevision} from '../src/answer-policy.js';
 
 const question={id:'auto-test',text:'測試題',options:['甲','乙','丙','丁']};
 function fixture(){
@@ -19,7 +20,10 @@ function complete(r){r.answers[1].b={choice:2,prediction:1,attempt:r.public.stat
 test('wait for every active member, then reveal once with the shared timestamp',()=>{
  const r=fixture(),expected={...r.public.state};
  assert.equal(autoRevealRound(r,expected,1400),undefined);
- complete(r);assert.equal(autoRevealReason(r,1500),'all-answered');
+ complete(r);assert.equal(autoRevealReason(r,1500),'sync-consent');
+ autoRevealRound(r,expected,1500);assert.equal(r.public.state.status,'open');
+ for(const id of ['a','b'])r.public.earlyClose.votes[id]={code:expected.code,round:expected.round,attempt:expected.attempt};
+ assert.equal(autoRevealReason(r,1500),'unanimous');
  assert.equal(autoRevealRound(r,expected,1500,1700),r);
  assert.equal(r.public.state.status,'revealed');
  assert.equal(r.public.results[1].revealedAt,1700);
@@ -52,7 +56,7 @@ test('ignore stale room, round and attempt requests and never reveal during targ
 test('late joiners must answer; removed members do not block; invalid or stale answers do not count',()=>{
  const r=fixture();complete(r);
  r.public.members.c={name:'丙',joined:3,seat:'2'};assert.equal(autoRevealReason(r,1600),null);
- r.moderation.c={removed:true};assert.equal(autoRevealReason(r,1600),'all-answered');
+ r.moderation.c={removed:true};assert.equal(autoRevealReason(r,1600),'sync-consent');
  for(const invalid of [{attempt:0},{choice:4},{prediction:-1}]){
   const next=structuredClone(r);Object.assign(next.answers[1].b,invalid);assert.equal(autoRevealReason(next,1600),null);
  }
@@ -62,7 +66,33 @@ test('classic rounds also reveal after all answers and reject stale next-round w
  const r=newRoom('CLASS1','classic');r.public.members={a:{name:'甲'}};
  r.public.state=startRound(r,question,1000);const expected={...r.public.state};
  r.answers[1]={a:{choice:0,prediction:0}};
+ autoRevealRound(r,expected,2000);assert.equal(r.public.state.status,'open');
+ r.public.earlyClose.votes.a={code:expected.code,round:expected.round,attempt:expected.attempt||0};
  autoRevealRound(r,expected,2000);assert.equal(r.public.results[1].points.a,1);
  r.public.state=startRound(r,question,3000);assert.equal(autoRevealRound(r,expected,100000),undefined);
  assert.equal(r.public.state.status,'open');
+});
+
+test('late arrival pauses consent readiness; old round votes and removed players do not count',()=>{
+ const r=fixture(),expected={...r.public.state};complete(r);autoRevealRound(r,expected,1600);
+ r.public.earlyClose.votes.a={code:expected.code,round:1,attempt:expected.attempt};
+ r.public.earlyClose.votes.b={code:'OLD000',round:1,attempt:expected.attempt};
+ assert.equal(autoRevealReason(r,1700),null);
+ r.public.members.c={name:'丙',seat:'2'};
+ assert.equal(autoRevealReason(r,1700),'sync-consent');autoRevealRound(r,expected,1700);
+ assert.equal(r.public.earlyClose.ready,false);
+ r.public.earlyClose.votes.b={code:expected.code,round:1,attempt:expected.attempt};
+ assert.equal(autoRevealReason(r,1700),null);
+ r.moderation.c={removed:true};assert.equal(autoRevealReason(r,1800),'unanimous');
+ autoRevealRound(r,expected,1800);assert.equal(r.public.state.status,'revealed');
+});
+
+test('revision survives reload and consent locks even an unused edit',()=>{
+ const r=fixture();complete(r);autoRevealRound(r,{...r.public.state},1600);
+ assert.equal(nextRevision(null),0);assert.equal(nextRevision({}),1);
+ assert.equal(answerEditable(r.public,'a',{revision:0}),false);
+ assert.equal(answerEditable(r.public,'b',{revision:0}),true);
+ assert.equal(answerEditable(r.public,'b',{revision:1}),false);
+ r.public.earlyClose.votes.b={code:r.public.state.code,round:1,attempt:r.public.state.attempt};
+ assert.equal(answerEditable(r.public,'b',{revision:0}),false);
 });
