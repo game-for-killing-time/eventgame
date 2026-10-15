@@ -152,3 +152,17 @@ test('host relay transactions deliver chat and first submission to independent c
  await set(ref(a,'room/answers/1/a'),{choice:0,prediction:3,revision:1,at:serverTimestamp()});await relay('submissions');assert.deepEqual((await get(ref(display,'room/effects/submissions'))).val(),expected);
  await assertFails(set(ref(a,'room/effects/submissions/items/a'),0));
 });
+
+test('host removal allows same identity to rejoin, preserves answers, and keeps lock enforcement',async()=>{
+ const {removeRoomMember,allowRemovedMembersToRejoin}=await import('../src/member-removal.js');
+ const a=db('returning'),h=host();await assertSucceeds(join(a,'returning'));await assertSucceeds(submit(a,'returning'));
+ await assertSucceeds(runTransaction(ref(h,'room'),r=>removeRoomMember(r,'returning','PARTY1'),{applyLocally:false}));
+ await assertFails(submit(a,'returning',1));
+ await assertSucceeds(join(a,'returning'));
+ assert.equal((await get(ref(a,'room/answers/1/returning/choice'))).val(),0);
+ await update(ref(h,'room'),{'public/members/returning':null,'public/seats/0':null,'moderation/returning/removed':true});
+ await assertFails(join(a,'returning'));
+ await assertSucceeds(runTransaction(ref(h,'room'),r=>allowRemovedMembersToRejoin(r),{applyLocally:false}));
+ await set(ref(h,'room/public/state/locked'),true);await assertFails(join(a,'returning'));
+ await set(ref(h,'room/public/state/locked'),false);await assertSucceeds(join(a,'returning'));
+});

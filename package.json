@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "vite build --base=./",
-    "test": "node --test tests/game.test.js tests/story.test.js tests/voyage.test.js tests/spotlight.test.js tests/auto-reveal.test.js tests/misunderstood.test.js",
+    "test": "node --test tests/game.test.js tests/story.test.js tests/voyage.test.js tests/spotlight.test.js tests/auto-reveal.test.js tests/misunderstood.test.js tests/member-removal.test.js",
     "test:rules": "firebase emulators:exec --only database --project demo-hoho \"node --test --test-concurrency=1 tests/rules.test.js tests/story-rules.test.js tests/voyage-rules.test.js tests/spotlight-rules.test.js tests/auto-reveal-rules.test.js\""
   },
   "dependencies": {

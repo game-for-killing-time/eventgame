@@ -1,3 +1,4 @@
+import {removeRoomMember,allowRemovedMembersToRejoin} from './member-removal.js';
 import {isSpotlight,configureSpotlight,awardMasters,targetFirst,activateGuesses,skipTarget} from './spotlight.js';
 import {endRoom} from './end-room.js';
 import {autoRevealRound,sameRound,ballotMatches,hasConsented} from './auto-reveal.js';
@@ -38,7 +39,7 @@ export async function connect(role,onConnection) {
  if(action==='relayEffects'){await d.runTransaction(ref('room'),r=>r?relayEffects(r,value,api.now()):null,{applyLocally:false});return;}
  if(action==='chatEffects'||action==='submitEffects'){await d.update(ref('room'),{[`public/state/${action}`]:value,[`effects/${action==='chatEffects'?'chat':'submissions'}`]:null});return;}
  if(action==='clean'){const r=await d.runTransaction(ref('room'),room=>!room||room.public.state.status==='ended'?null:undefined,{applyLocally:false});if(!r.committed) throw Error('請先結束房間。');return;}
- if(action==='migrate'){const expected=await get('room/public/state');if(!expected)return;await d.runTransaction(ref('room'),r=>!r?null:r.public.state.code===expected.code?publishRevealedChoices(migrateAffinity(r)):undefined,{applyLocally:false});return;}
+ if(action==='migrate'){const expected=await get('room/public/state');if(!expected)return;await d.runTransaction(ref('room'),r=>!r?null:r.public.state.code===expected.code?allowRemovedMembersToRejoin(publishRevealedChoices(migrateAffinity(r))):undefined,{applyLocally:false});return;}
  if(action==='autoReveal'){await d.runTransaction(ref('room'),room=>autoRevealRound(room,value,api.now(),d.serverTimestamp()),{applyLocally:false});return;}
  if(action==='reveal'){const expected=value||await get('room/public/state');const r=await d.runTransaction(ref('room'),room=>!room?null:sameRound(room.public.state,expected)?settleRoom(room,expected.round,expected.code,d.serverTimestamp()):undefined,{applyLocally:false});if(!r.committed)throw Error('這輪狀態已改變，請重新確認。');return;}
  if(action==='configure'){const result=await d.runTransaction(ref('room'),r=>r?configureSpotlight(r,value):null,{applyLocally:false});if(!result.committed)throw Error('請先建立房間。');return;}
@@ -48,7 +49,7 @@ export async function connect(role,onConnection) {
  if(action==='end'){const expected=await get('room/public/state');if(!expected)throw Error('目前沒有房間可結束。');const result=await d.runTransaction(ref('room'),r=>endRoom(r,expected.code),{applyLocally:false});if(!result.committed||result.snapshot.val()?.public?.state?.status!=='ended')throw Error('房間已變更，請重新確認後再結束。');return;}
  if(action==='lock'||action==='chatOpen'){await d.set(ref(`room/public/state/${action==='lock'?'locked':'chatOpen'}`),value);return;}
  if(action==='mute'){await d.update(ref('room'),{[`moderation/${value.uid}/muted`]:value.muted,...(value.muted?{[`effects/chat/${value.uid}`]:null}:{})});return;}
- if(action==='remove'){const m=await get(`room/public/members/${value}`);await d.update(ref('room'),{[`moderation/${value}/removed`]:true,[`public/members/${value}`]:null,[`public/island/positions/${value}`]:null,[`effects/chat/${value}`]:null,[`effects/submissions/items/${value}`]:null,...(m?.seat!==undefined?{[`public/seats/${m.seat}`]:null}:{})});return;}
+ if(action==='remove'){const expected=await get('room/public/state');await d.runTransaction(ref('room'),r=>removeRoomMember(r,value,expected?.code),{applyLocally:false});return;}
  if(action==='deleteMessage'){await d.runTransaction(ref('room'),r=>{if(!r)return null;if(r.chat?.[value.uid]?.messages)delete r.chat[value.uid].messages[value.id];if(String(r.effects?.chat?.[value.uid]?.seq)===String(value.id))delete r.effects.chat[value.uid];return r;},{applyLocally:false});return;}
  if(action==='selectStory'){await d.set(ref('room/public/story'),value);return;}
  }
@@ -94,14 +95,14 @@ function demo(role,onConnection){
  if(action==='start'){r.public.state=startRound(r,value,Date.now());delete r.public.story;}
  if(action==='close'&&sameRound(s,value||s)&&s.status==='open')s.status='closed';
  if(action==='extend'&&s.status==='open'&&s.deadline>Date.now())s.deadline+=15000;
- if(action==='migrate')r=publishRevealedChoices(migrateAffinity(r));
+ if(action==='migrate')r=allowRemovedMembersToRejoin(publishRevealedChoices(migrateAffinity(r)));
  if(action==='reveal'&&sameRound(s,value||s))r=settleRoom(r,s.round,s.code)||r;
  if(action==='end'){s.status='ended';s.locked=true;s.chatOpen=false;awardMasters(r);}
  if(action==='clean'){if(s.status!=='ended')throw Error('請先結束房間。');r=null;}
  if(action==='lock')s.locked=value;
  if(action==='chatOpen')s.chatOpen=value;
  if(action==='mute'){r.moderation??={};r.moderation[value.uid]??={};r.moderation[value.uid].muted=value.muted;if(value.muted&&r.effects?.chat)delete r.effects.chat[value.uid];}
- if(action==='remove'){r.moderation??={};r.moderation[value]={removed:true};delete r.public.members[value];if(r.effects?.chat)delete r.effects.chat[value];if(r.effects?.submissions?.items)delete r.effects.submissions.items[value];if(r.public.island?.positions)delete r.public.island.positions[value];}
+ if(action==='remove')removeRoomMember(r,value,s.code);
  if(action==='deleteMessage'){delete r.chat[value.uid].messages[value.id];if(String(r.effects?.chat?.[value.uid]?.seq)===String(value.id))delete r.effects.chat[value.uid];}
  if(action==='selectStory')r.public.story=value;
  save(r);
