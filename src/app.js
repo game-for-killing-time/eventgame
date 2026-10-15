@@ -80,7 +80,15 @@ function entry(){
 function eligible(){return role==='viewer'&&pub?.members?.[api.uid()]&&savedCode===pub?.state?.code&&!moderation.removed;}
 function render(){
  const s=pub?.state,joined=eligible();entry();updateVoterDialog();
- if(role==='display'){$('islandArea').hidden=!s;document.body.classList.toggle('display-in-room',!!s);if(s)updateIsland(pub,null);}
+ if(role==='display'){
+  $('islandArea').hidden=!s;document.body.classList.toggle('display-in-room',!!s);if(s)updateIsland(pub,null);
+  const backgroundVideo=document.querySelector('.display-background-video');
+  if(backgroundVideo){
+   backgroundVideo.hidden=!!s;
+   if(s)backgroundVideo.pause();
+   else if(backgroundVideo.paused){backgroundVideo.muted=true;backgroundVideo.play().catch(()=>{});}
+  }
+ }
  updateEffects(pub,role==='display'||joined);
  if(role==='host')updateInvite({url:s?new URL(link('index',s.code),location.href).href:'',available:hostReady&&!!s&&s.status!=='ended',demo:explicitDemo||!config.firebase,local:['localhost','127.0.0.1'].includes(location.hostname),locked:s?.locked});
  if(role==='host'&&!s){const m=document.querySelector('.room-management');m.open=false;m.dataset.roomState='';m.querySelector('summary').textContent='房間管理與登出';}
