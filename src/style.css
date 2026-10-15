@@ -428,3 +428,23 @@ header nav{font-size:13px;gap:20px}
  .display.display-in-room .question:has(.target-banner){padding:12px 22px}
  .display.display-in-room .question:has(.target-banner) h1{margin:8px 0 12px;font-size:28px}
 }
+
+/* Fit the QR welcome screen to the viewport without clipping its content. */
+@media(min-width:651px){
+ .display:has(.display-welcome) #app{height:100dvh;display:flex;flex-direction:column}
+ .display:has(.display-welcome) header{flex-shrink:0;padding:12px 24px 6px}
+ .display:has(.display-welcome) .brand-logo{width:clamp(150px,25dvh,230px);height:clamp(72px,12dvh,110px)}
+ .display:has(.display-welcome) .mode:empty{display:none}
+ .display:has(.display-welcome) main{flex:1;min-height:0;height:auto;width:100%;margin:0 auto;padding:8px 32px 20px}
+ .display:has(.display-welcome) .layout{height:100%;min-height:0;grid-template-rows:minmax(0,1fr)}
+ .display:has(.display-welcome) #game{height:100%;min-height:0;display:grid;grid-template-columns:1fr;grid-template-rows:minmax(0,1fr);gap:0}
+ .display .display-welcome{min-height:0}
+ .display .display-entry{padding:clamp(14px,2dvh,24px) 24px}
+ .display-entry .opening-status{padding:3px 0}
+ .display-entry h1{font-size:clamp(26px,4dvh,40px);margin:10px 0}
+ .display-entry p{font-size:14px;line-height:1.6;margin-bottom:12px}
+ .display-entry .display-qr{width:min(100%,28dvh,260px);margin-bottom:12px}
+ .display-entry .player-entry-link{padding:10px;font-size:17px}
+ .display-entry small{margin-top:10px;font-size:12px}
+ .display .campfire-caption{padding:10px 8px}
+}
