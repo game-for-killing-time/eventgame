@@ -57,4 +57,8 @@ node scripts/add-voyage-rules.mjs
 - 本機瀏覽器：兩個獨立來源玩家（127.0.0.1／localhost）登入 Emulator，驗證主角不需預測、其他人雙選提交、伺服器確認、揭曉、默契、隱藏分及一題快速結算稱號；另驗證本機示範加入、補答及揭曉。
 - 修正 Firebase 不保留空陣列導致揭曉投票名單讀取 `winners` 報錯，並加入回歸測試。
 - 手機窄視窗及桌面／直播展示已檢查；實體手機、OBS 軟體及真人完整 30 題活動尚未實測。
-- `npm run build`、正式 Firebase 設定建置檢查通過。正式部署需等使用者確認規則已發布。
+- `npm run build`、正式 Firebase 設定建置檢查通過。使用者已確認規則發布，正式版已部署；見下方發布紀錄。
+
+## 正式發布紀錄
+
+2026-10-15：使用者確認已發布完整規則。GitHub Actions [38704222583](https://github.com/game-for-killing-time/eventgame/actions/runs/38704222583) 成功部署 `547ad99`，38 項單元與 32 項 Emulator 測試在 CI 再次通過。主持、玩家、直播入口都已連線。正式資料庫唯讀檢查確認未登入的 `/room/answers`、`/room/hostOnly/spotlight`、`/room/hostOnly/affinity` 均回應 401。正式既有房間保留舊規則，未建立或清理正式房間；發布版本的新房設定另以明確 demo 模式驗證。
