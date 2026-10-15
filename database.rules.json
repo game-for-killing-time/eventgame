@@ -136,6 +136,182 @@
           ".write": "auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous'"
         }
       }
+    },
+    "adventure": {
+      ".read": "auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous'",
+      ".write": "auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous'",
+      "public": {
+        ".read": true
+      },
+      "hostOnly": {},
+      "moderation": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid"
+        }
+      },
+      "seats": {
+        ".read": "auth != null",
+        "$seat": {
+          ".write": "auth != null && !data.exists() && newData.val() === auth.uid && $seat.matches(/^([0-9]|1[0-9])$/)",
+          ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.parent().parent().child('roster').child(auth.uid).child('seat').val() === $seat)"
+        }
+      },
+      "roster": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".write": "auth != null && auth.uid === $uid && !data.exists() && newData.exists() && root.child('adventure').child('public').exists() && root.child('adventure').child('public').child('phase').val() !== 'ended' && root.child('adventure').child('public').child('locked').val() !== true && root.child('adventure').child('moderation').child($uid).child('removed').val() !== true",
+          ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.hasChildren([\"name\",\"seat\",\"game\",\"at\"]))",
+          "name": {
+            ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.isString() && newData.val().length > 0 && newData.val().length <= 20)"
+          },
+          "seat": {
+            ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.isString() && newData.val().matches(/^([0-9]|1[0-9])$/) && newData.parent().parent().parent().child('seats').child(newData.val()).val() === $uid)"
+          },
+          "game": {
+            ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.isString() && newData.val() === root.child('adventure').child('public').child('id').val())"
+          },
+          "at": {
+            ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.val() === now)"
+          },
+          "$other": {
+            ".validate": "auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous'"
+          }
+        }
+      },
+      "inbox": {
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid && root.child('adventure').child('roster').child($uid).exists() && root.child('adventure').child('moderation').child($uid).child('removed').val() !== true"
+        }
+      },
+      "inputs": {
+        "answers": {
+          "$round": {
+            "$uid": {
+              ".read": "auth != null && auth.uid === $uid && root.child('adventure').child('roster').child($uid).exists() && root.child('adventure').child('moderation').child($uid).child('removed').val() !== true",
+              ".write": "auth != null && auth.uid === $uid && root.child('adventure').child('roster').child($uid).exists() && root.child('adventure').child('moderation').child($uid).child('removed').val() !== true && newData.exists() && root.child('adventure').child('public').child('phase').val() === 'open' && root.child('adventure').child('public').child('round').val() + '' === $round && now < root.child('adventure').child('public').child('deadline').val()",
+              ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.hasChildren([\"game\",\"at\",\"qid\",\"choice\",\"prediction\"]))",
+              "game": {
+                ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.isString() && newData.val() === root.child('adventure').child('public').child('id').val())"
+              },
+              "at": {
+                ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.val() === now)"
+              },
+              "qid": {
+                ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.isString() && newData.val() === root.child('adventure').child('inbox').child($uid).child('question/id').val() && root.child('adventure').child('inbox').child($uid).child('game').val() === root.child('adventure').child('public').child('id').val() && root.child('adventure').child('inbox').child($uid).child('round').val() + '' === $round)"
+              },
+              "choice": {
+                ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.isNumber() && newData.val() >= 0 && newData.val() <= 3 && newData.val() % 1 === 0)"
+              },
+              "prediction": {
+                ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.isNumber() && newData.val() % 1 === 0 && ((root.child('adventure').child('public').child('scored').val() === true && newData.val() >= 0 && newData.val() <= 3) || (root.child('adventure').child('public').child('scored').val() !== true && newData.val() === -1)))"
+              },
+              "$other": {
+                ".validate": "auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous'"
+              }
+            }
+          }
+        },
+        "routes": {
+          "$round": {
+            "$uid": {
+              ".read": "auth != null && auth.uid === $uid && root.child('adventure').child('roster').child($uid).exists() && root.child('adventure').child('moderation').child($uid).child('removed').val() !== true",
+              ".write": "auth != null && auth.uid === $uid && root.child('adventure').child('roster').child($uid).exists() && root.child('adventure').child('moderation').child($uid).child('removed').val() !== true && newData.exists() && root.child('adventure').child('public').child('phase').val() === 'routing' && root.child('adventure').child('public').child('round').val() + '' === $round && now < root.child('adventure').child('public').child('deadline').val()",
+              ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.hasChildren([\"game\",\"at\",\"route\"]))",
+              "game": {
+                ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.isString() && newData.val() === root.child('adventure').child('public').child('id').val())"
+              },
+              "at": {
+                ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.val() === now)"
+              },
+              "route": {
+                ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.isString() && (newData.val() === root.child('adventure').child('public').child('routes/0/id').val() || newData.val() === root.child('adventure').child('public').child('routes/1/id').val()))"
+              },
+              "$other": {
+                ".validate": "auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous'"
+              }
+            }
+          }
+        },
+        "runoff": {
+          "$uid": {
+            ".read": "auth != null && auth.uid === $uid && root.child('adventure').child('roster').child($uid).exists() && root.child('adventure').child('moderation').child($uid).child('removed').val() !== true",
+            ".write": "auth != null && auth.uid === $uid && root.child('adventure').child('roster').child($uid).exists() && root.child('adventure').child('moderation').child($uid).child('removed').val() !== true && newData.exists() && root.child('adventure').child('public').child('phase').val() === 'runoff' && now < root.child('adventure').child('public').child('deadline').val()",
+            ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.hasChildren([\"game\",\"at\",\"choice\"]))",
+            "game": {
+              ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.isString() && newData.val() === root.child('adventure').child('public').child('id').val())"
+            },
+            "at": {
+              ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.val() === now)"
+            },
+            "choice": {
+              ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.isNumber() && (newData.val() === root.child('adventure').child('public').child('runoffOptions/0').val() || newData.val() === root.child('adventure').child('public').child('runoffOptions/1').val() || newData.val() === root.child('adventure').child('public').child('runoffOptions/2').val() || newData.val() === root.child('adventure').child('public').child('runoffOptions/3').val()))"
+            },
+            "$other": {
+              ".validate": "auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous'"
+            }
+          }
+        }
+      },
+      "consent": {
+        ".read": true,
+        "$uid": {
+          ".write": "auth != null && auth.uid === $uid && root.child('adventure').child('roster').child($uid).exists() && root.child('adventure').child('moderation').child($uid).child('removed').val() !== true && root.child('adventure').child('public').child('phase').val() === 'ended' && newData.exists()",
+          ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.hasChildren([\"game\",\"share\"]))",
+          "game": {
+            ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.isString() && newData.val() === root.child('adventure').child('public').child('id').val())"
+          },
+          "share": {
+            ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.isBoolean())"
+          },
+          "$other": {
+            ".validate": "auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous'"
+          }
+        }
+      },
+      "sharedCards": {
+        "$uid": {
+          ".read": "root.child('adventure').child('public').child('phase').val() === 'ended' && root.child('adventure').child('consent').child($uid).child('game').val() === root.child('adventure').child('public').child('id').val() && root.child('adventure').child('consent').child($uid).child('share').val() === true && root.child('adventure').child('moderation').child($uid).child('removed').val() !== true"
+        }
+      },
+      "chat": {
+        "$uid": {
+          ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.hasChildren(['seq','lastSent','messages']))",
+          "seq": {
+            ".read": "auth != null && auth.uid === $uid",
+            ".write": "auth != null && auth.uid === $uid && root.child('adventure').child('roster').child($uid).exists() && root.child('adventure').child('moderation').child($uid).child('removed').val() !== true && root.child('adventure').child('public').child('chatOpen').val() === true && root.child('adventure').child('moderation').child($uid).child('muted').val() !== true && newData.exists() && (!root.child('adventure').child('chat').child($uid).child('lastSent').exists() || now - root.child('adventure').child('chat').child($uid).child('lastSent').val() >= 3000) && newData.parent().child('lastSent').val() === now && newData.parent().child('seq').val() === (root.child('adventure').child('chat').child($uid).child('seq').exists() ? root.child('adventure').child('chat').child($uid).child('seq').val() + 1 : 1)",
+            ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.isNumber() && newData.val() > 0 && newData.val() % 1 === 0)"
+          },
+          "lastSent": {
+            ".write": "auth != null && auth.uid === $uid && root.child('adventure').child('roster').child($uid).exists() && root.child('adventure').child('moderation').child($uid).child('removed').val() !== true && root.child('adventure').child('public').child('chatOpen').val() === true && root.child('adventure').child('moderation').child($uid).child('muted').val() !== true && newData.exists() && (!root.child('adventure').child('chat').child($uid).child('lastSent').exists() || now - root.child('adventure').child('chat').child($uid).child('lastSent').val() >= 3000) && newData.parent().child('lastSent').val() === now && newData.parent().child('seq').val() === (root.child('adventure').child('chat').child($uid).child('seq').exists() ? root.child('adventure').child('chat').child($uid).child('seq').val() + 1 : 1)",
+            ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.val() === now)"
+          },
+          "messages": {
+            ".indexOn": [
+              "at"
+            ],
+            ".read": "auth != null && root.child('adventure').child('roster').child(auth.uid).exists() && root.child('adventure').child('moderation').child(auth.uid).child('removed').val() !== true && query.orderByChild === 'at' && query.limitToLast != null && query.limitToLast <= 3",
+            "$message": {
+              ".write": "!data.exists() && auth != null && auth.uid === $uid && root.child('adventure').child('roster').child($uid).exists() && root.child('adventure').child('moderation').child($uid).child('removed').val() !== true && root.child('adventure').child('public').child('chatOpen').val() === true && root.child('adventure').child('moderation').child($uid).child('muted').val() !== true && newData.exists() && (!root.child('adventure').child('chat').child($uid).child('lastSent').exists() || now - root.child('adventure').child('chat').child($uid).child('lastSent').val() >= 3000) && newData.parent().parent().child('lastSent').val() === now && newData.parent().parent().child('seq').val() === (root.child('adventure').child('chat').child($uid).child('seq').exists() ? root.child('adventure').child('chat').child($uid).child('seq').val() + 1 : 1)",
+              ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || ((data.exists()) || ($message === newData.parent().parent().child('seq').val() + '' && newData.hasChildren(['text','at','game'])))",
+              "text": {
+                ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.isString() && newData.val().length > 0 && newData.val().length <= 300)"
+              },
+              "at": {
+                ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (data.exists() ? newData.val() === data.val() : newData.val() === now)"
+              },
+              "game": {
+                ".validate": "(auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous') || (newData.isString() && newData.val() === root.child('adventure').child('public').child('id').val())"
+              },
+              "$other": {
+                ".validate": "auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous'"
+              }
+            }
+          },
+          "$other": {
+            ".validate": "auth != null && auth.uid === root.child('config/hostUid').val() && auth.token.firebase.sign_in_provider !== 'anonymous'"
+          }
+        }
+      }
     }
   }
 }
