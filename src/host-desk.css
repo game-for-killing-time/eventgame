@@ -7,10 +7,10 @@
 .host .hint,.host .section-title,.host .host-welcome p,.host .host-code-label,.host .question-picker>label,.host .host-mode-switch small{color:var(--host-muted)}
 .host main{max-width:1400px;padding-top:20px}
 .host .host-mode-switch{max-width:1352px;margin:8px auto 0;background:var(--host-surface);border:1px solid var(--host-line);border-radius:16px;color:var(--host-ink);backdrop-filter:blur(12px)}
-.host button,.host .host-mode-switch a{background:#fff8e815;border:1px solid #fff8e840;color:var(--host-ink);box-shadow:none;border-radius:10px}
+.host button,.host .host-mode-switch :is(a,button){background:#fff8e815;border:1px solid #fff8e840;color:var(--host-ink);box-shadow:none;border-radius:10px}
 .host button:hover:not(:disabled){background:#fff8e82b}
 .host button:disabled{opacity:.45;cursor:not-allowed}
-.host button.primary,.host .host-mode-switch a[aria-current=page]{background:var(--host-green);color:var(--host-ink);border-color:#b4d5b961;box-shadow:none}
+.host button.primary,.host .host-mode-switch :is(a,button)[aria-current=page]{background:var(--host-green);color:var(--host-ink);border-color:#b4d5b961;box-shadow:none}
 .host button.primary:hover:not(:disabled){background:#18533f}
 .host button.danger{color:#ffc1b4}
 .host input,.host select,.host textarea{background:#fffaf0f2;color:#203e37;border:1px solid #fff8e840;border-radius:10px}

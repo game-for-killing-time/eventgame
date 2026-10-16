@@ -5,6 +5,17 @@ import {selectedMode,validMode} from './broadcast-model.js';
 export const sessionOf=room=>room?.public?.broadcast;
 export const isSession=s=>s?.version===1&&!!s.code;
 export const codeOf=(mode,r)=>mode==='classic'?r?.public?.state?.code:r?.code;
+export const SWITCH_BLOCKED='請先結束目前遊戲才能切換模式。';
+export function gameInProgress(mode,state){
+ if(!state)return false;
+ const phase=state.status??state.phase;
+ if(phase==='ended')return false;
+ return mode==='classic'?phase!=='waiting'||(state.round||0)>0:phase!=='lobby'||(state.round||0)>0;
+}
+export function modeState(mode,r){
+ const s=mode==='classic'?r?.public?.state:r?.hostOnly;
+ return r?.sessionPause?{...s,status:r.sessionPause.phase,phase:r.sessionPause.phase}:s;
+}
 export function membersOf(mode,r){
  const entries=mode==='classic'?r?.public?.members:r?.roster;
  return Object.fromEntries(Object.entries(entries||{}).filter(([id])=>!r?.moderation?.[id]?.removed).map(([id,m])=>[id,{name:m.name,seat:String(m.seat),joined:m.joined||m.at||0}]));
@@ -62,7 +73,7 @@ export function mergeLegacyMembers(primary,secondary){
  for(const [id,m] of Object.entries(secondary))if(!result[id]){const seat=Array.from({length:20},(_,i)=>String(i)).find(x=>!used.has(x));if(seat===undefined)throw Error('兩個舊房間合共超過 20 位玩家，請先整理玩家名單再統一。');result[id]={...m,seat};used.add(seat);}
  return result;
 }
-export function transitionSession({room,voyage},mode,now,{createCode,token}={}){
+export function transitionSession({room,voyage},mode,now,{createCode,token,restartTarget=false}={}){
  if(!validMode(mode))throw Error('無效的主持模式。');
  const old=sessionOf(room),unified=isSession(old),source=unified?old.mode:(codeOf(selectedMode(old),selectedMode(old)==='classic'?room:voyage)?selectedMode(old):codeOf('classic',room)?'classic':'voyage');
  const sourceRoom=source==='classic'?room:voyage;
@@ -72,6 +83,10 @@ export function transitionSession({room,voyage},mode,now,{createCode,token}={}){
  if(!unified)members=mergeLegacyMembers(members,membersOf(source==='classic'?'voyage':'classic',source==='classic'?voyage:room));
  let classic=codeOf('classic',room)?structuredClone(room):newRoom(code);
  let adventure=codeOf('voyage',voyage)?structuredClone(voyage):createVoyage(code,now);
+ if(restartTarget){
+  if(mode==='classic')classic=newRoom(code);
+  else adventure=createVoyage(code,now,adventure.hostOnly.packId);
+ }
  classic=syncMembers('classic',classic,members,code,now);adventure=syncMembers('voyage',adventure,members,code,now);
  for(const id of Object.keys(members)){
   const muted=sourceRoom?.moderation?.[id]?.muted===true;
@@ -84,8 +99,8 @@ export function transitionSession({room,voyage},mode,now,{createCode,token}={}){
  // Room-wide controls follow the host; per-mode progress stays independent.
  const locked=sourcePause?.locked??(source==='classic'?sourceRoom?.public?.state?.locked:sourceRoom?.locked)??false;
  const chatOpen=sourcePause?.chatOpen??(source==='classic'?sourceRoom?.public?.state?.chatOpen:sourceRoom?.chatOpen)??true;
- if(mode==='classic'){classic.public.state.locked=locked;classic.public.state.chatOpen=chatOpen;}
- else{adventure.locked=locked;adventure.chatOpen=chatOpen;adventure=project(adventure);}
- classic.public.broadcast={version:1,code,mode,revision:(old?.revision||0)+1,status:old?.status==='ended'?'ended':'active',at:now,...(token?{operation:token}:{})};
+ if(mode==='classic'){classic.public.state.locked=restartTarget?false:locked;classic.public.state.chatOpen=restartTarget?true:chatOpen;}
+ else{adventure.locked=restartTarget?false:locked;adventure.chatOpen=restartTarget?true:chatOpen;adventure=project(adventure);}
+ classic.public.broadcast={version:1,code,mode,revision:(old?.revision||0)+1,status:!restartTarget&&old?.status==='ended'?'ended':'active',at:now,...(token?{operation:token}:{})};
  return {room:classic,voyage:adventure};
 }

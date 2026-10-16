@@ -7,8 +7,8 @@ body.host header .brand-logo,body.voyage-page header .brand-logo{width:250px;hei
 body.host header nav,body.voyage-page header nav{display:flex;align-items:center;flex-wrap:wrap;gap:20px;font-size:14px}
 body.host header a,body.voyage-page header a{color:var(--party-gold);font-weight:700}
 body.host .host-mode-switch,body.voyage-page .host-mode-switch{max-width:1352px;margin:8px auto 0;padding:12px 24px;background:var(--party-surface);border:1px solid var(--party-line);color:var(--party-ink);border-radius:16px;backdrop-filter:blur(12px)}
-body.host .host-mode-switch a,body.voyage-page .host-mode-switch a{background:#fff8e815;color:var(--party-ink);border:1px solid #fff8e840;border-radius:10px;box-shadow:none}
-body.host .host-mode-switch a[aria-current=page],body.voyage-page .host-mode-switch a[aria-current=page]{background:var(--party-green);border-color:#b4d5b961}
+body.host .host-mode-switch :is(a,button),body.voyage-page .host-mode-switch :is(a,button){background:#fff8e815;color:var(--party-ink);border:1px solid #fff8e840;border-radius:10px;box-shadow:none}
+body.host .host-mode-switch :is(a,button)[aria-current=page],body.voyage-page .host-mode-switch :is(a,button)[aria-current=page]{background:var(--party-green);border-color:#b4d5b961}
 body.host .entry,body.voyage-host .host-login{display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:40px;padding:28px 40px}
 body.host .entry h1,body.voyage-host .host-login h1{font-size:clamp(28px,3vw,40px);letter-spacing:0;line-height:1.4}
 body.host .entry form,body.voyage-host .host-login form{padding:28px;margin:0;background:#fff8e80c;border:1px solid var(--party-line);border-radius:12px;box-shadow:none}

@@ -6,6 +6,7 @@ import {ref,get,set,update,serverTimestamp} from 'firebase/database';
 import {sessionBackend} from '../src/session-backend.js';
 import {broadcastPath} from '../src/broadcast-model.js';
 import {createVoyage,remoteCommand} from '../src/voyage-remote-model.js';
+import {pauseMode} from '../src/session-model.js';
 let env;
 const client=(uid,provider='anonymous')=>env.authenticatedContext(uid,{firebase:{sign_in_provider:provider}}).database();
 const host=()=>client('host','password');
@@ -60,11 +61,59 @@ test('end and clean affect the whole session; a new game receives a fresh code a
  const db=host(),s=sessionBackend(db.app,undefined,db);await s.create('voyage');const old=(await read(db,broadcastPath)).code;
  await assert.rejects(s.create('classic'),/已有房間/);await assert.rejects(s.clean('voyage'),/先結束/);
  await s.end('voyage');assert.equal((await read(db,'room/public/state')).status,'ended');assert.equal((await read(db,'voyage/public')).phase,'ended');
- await assert.rejects(s.switch('classic'),/清理/);await s.clean('voyage');assert.equal(await read(db,'voyage'),null);
+ await s.clean('voyage');assert.equal(await read(db,'voyage'),null);
  await s.create('classic');const next=await read(db,broadcastPath);assert.notEqual(next.code,old);assert.equal(next.mode,'classic');assert.equal(await read(db,'room/public/members'),null);
 });
 test('an interrupted switch is recoverable after its lease expires without losing the roster',async()=>{
  const db=host(),s=sessionBackend(db.app,undefined,db);await s.create('classic');const code=(await read(db,broadcastPath)).code;
  await update(ref(db,broadcastPath),{lease:{token:'lost-connection',until:1,target:'voyage'}});
  await s.ensure('classic');assert.equal((await read(db,broadcastPath)).mode,'voyage');assert.equal((await read(db,'voyage/public')).code,code);
+});
+
+test('running games block switches; ending enables both directions with the same code and participants',async()=>{
+ const db=host(),s=sessionBackend(db.app,undefined,db);await s.create('classic');
+ const code=(await read(db,broadcastPath)).code;
+ await update(ref(client('p0'),'room/public'),{'members/p0':{name:'留下玩家',seat:'0',code,joined:serverTimestamp()},'seats/0':'p0'});
+ for(const status of ['thinking','open','closed','revealed','waiting']){
+  await update(ref(db,'room/public/state'),{status,round:1});
+  await assert.rejects(s.switch('voyage'),/請先結束/);
+  assert.equal((await read(db,'room/public/state')).status,status);
+  assert.equal((await read(db,broadcastPath)).mode,'classic');
+  assert.equal((await read(db,broadcastPath)).lease,undefined);
+ }
+ await s.end('classic');await s.switch('voyage');
+ let v=await read(db,'voyage');
+ assert.equal(v.public.phase,'lobby');assert.equal(v.public.round,0);assert.equal(v.code,code);
+ assert.equal(v.public.players.p0.name,'留下玩家');assert.equal(v.public.players.p0.spectator,false);
+ assert.equal((await read(db,broadcastPath)).status,'active');
+ await set(ref(db,'voyage'),remoteCommand(v,'next',60,null,Date.now()));
+ await assert.rejects(s.switch('classic'),/請先結束/);
+ await s.end('voyage');await s.switch('classic');
+ const r=await read(db,'room');
+ assert.equal(r.public.state.code,code);assert.equal(r.public.state.status,'waiting');assert.equal(r.public.state.round,0);
+ assert.equal(r.public.members.p0.name,'留下玩家');assert.equal(r.public.state.locked,false);
+ await s.switch('voyage');v=await read(db,'voyage');
+ assert.equal(v.public.phase,'lobby');assert.equal(v.code,code);assert.equal(v.roster.p0.game,v.public.id);
+ assert.equal((await read(client('p0'),'voyage/inbox/p0')).game,v.public.id);
+});
+
+test('natural adventure ending permits switching without cleaning or rejoining',async()=>{
+ const db=host(),s=sessionBackend(db.app,undefined,db);await s.create('voyage');
+ const code=(await read(db,broadcastPath)).code;
+ const v=remoteCommand(await read(db,'voyage'),'end',null,null,Date.now());
+ await set(ref(db,'voyage'),v);await s.switch('classic');
+ assert.equal((await read(db,'room/public/state')).code,code);
+ assert.equal((await read(db,'room/public/state')).status,'waiting');
+ assert.equal((await read(db,broadcastPath)).status,'active');
+});
+
+test('interrupted switch after a natural ending recovers to an unlocked waiting room',async()=>{
+ const db=host(),s=sessionBackend(db.app,undefined,db);await s.create('voyage');
+ const v=remoteCommand(await read(db,'voyage'),'end',null,null,Date.now());
+ await set(ref(db,'voyage'),pauseMode('voyage',v,Date.now()));
+ await update(ref(db,broadcastPath),{lease:{token:'interrupted',until:1,target:'classic'}});
+ await s.ensure('classic');
+ const state=await read(db,'room/public/state');
+ assert.equal(state.status,'waiting');assert.equal(state.locked,false);assert.equal(state.chatOpen,true);
+ assert.equal(state.code,v.code);assert.equal((await read(db,broadcastPath)).lease,undefined);
 });

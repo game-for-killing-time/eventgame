@@ -2,11 +2,21 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {newRoom} from '../src/game.js';
 import {createVoyage,remoteCommand} from '../src/voyage-remote-model.js';
-import {pauseMode,transitionSession,membersOf,mergeLegacyMembers} from '../src/session-model.js';
+import {pauseMode,transitionSession,membersOf,mergeLegacyMembers,gameInProgress,modeState} from '../src/session-model.js';
 import {characterId} from '../src/characters.js';
 import {initialEntryMode,playerInvitation} from '../src/player-routing.js';
 
 const people=n=>Object.fromEntries(Array.from({length:n},(_,i)=>['p'+i,{name:'玩家'+i,seat:String(i),joined:100}]));
+test('switch availability covers waiting, every active phase, endings and legacy paused rounds',()=>{
+ assert.equal(gameInProgress('classic',null),false);
+ assert.equal(gameInProgress('classic',{status:'waiting',round:0}),false);
+ for(const status of ['thinking','open','closed','revealed','waiting'])assert.equal(gameInProgress('classic',{status,round:1}),true);
+ assert.equal(gameInProgress('classic',{status:'ended',round:8}),false);
+ assert.equal(gameInProgress('voyage',{phase:'lobby',round:0}),false);
+ for(const phase of ['intro','routing','first','firstClosed','revealed','twistIntro','twist','twistClosed','discussion'])assert.equal(gameInProgress('voyage',{phase,round:1}),true);
+ assert.equal(gameInProgress('voyage',{phase:'ended',round:12}),false);
+ assert.equal(gameInProgress('classic',modeState('classic',{public:{state:{status:'waiting',round:1}},sessionPause:{phase:'open'}})),true);
+});
 function seed(n=3){const room=newRoom('ABC234');room.public.members=Object.fromEntries(Object.entries(people(n)).map(([id,m])=>[id,{...m,code:'ABC234'}]));return {room,voyage:null};}
 function switchTo(data,mode,now=1000){return transitionSession({room:pauseMode('classic',data.room,now),voyage:pauseMode('voyage',data.voyage,now)},mode,now);}
 

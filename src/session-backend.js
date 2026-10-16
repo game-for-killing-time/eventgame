@@ -1,6 +1,6 @@
 import {getDatabase,ref,get,update,runTransaction} from 'firebase/database';
 import {broadcastPath,selectedMode} from './broadcast-model.js';
-import {isSession,codeOf,pauseMode,resumeMode,transitionSession} from './session-model.js';
+import {isSession,codeOf,pauseMode,resumeMode,transitionSession,gameInProgress,modeState,SWITCH_BLOCKED} from './session-model.js';
 import {endRoom} from './end-room.js';
 import {remoteCommand} from './voyage-remote-model.js';
 
@@ -18,20 +18,27 @@ export function sessionBackend(app,now=()=>Date.now(),database=getDatabase(app))
   try{
    let [room,voyage]=await Promise.all([read('room'),read('voyage')]);
    if(create&&(codeOf('classic',room)||codeOf('voyage',voyage)))throw Error('已有房間；請結束並清理後再建立。');
-   const currentFinished=previous.mode==='classic'?room?.public?.state?.status==='ended':voyage?.hostOnly?.phase==='ended';
+   const currentState=modeState(previous.mode,previous.mode==='classic'?room:voyage);
+   const currentFinished=(currentState?.status??currentState?.phase)==='ended';
    if(clean&&isSession(previous)&&previous.status!=='ended'&&!currentFinished)throw Error('請先結束整場遊戲，再清理房間。');
-   if(previous.status==='ended'&&!clean)throw Error('請先清理已結束的房間。');
+   const switching=!finish&&!clean&&!create&&previous.mode!==mode;
+   if(switching&&gameInProgress(previous.mode,currentState))throw Error(SWITCH_BLOCKED);
    for(const [path,m,r]of [['room','classic',room],['voyage','voyage',voyage]])if(codeOf(m,r)&&!r.sessionPause)restore.push([path,m]);
    // Transactions fence late joins and late host actions before taking the final snapshot.
    frozen=true;
    for(const [path,m]of [['room','classic'],['voyage','voyage']]){
-    const result=await runTransaction(ref(db,path),r=>codeOf(m,r)?pauseMode(m,r,now()):r,{applyLocally:false});
+    const result=await runTransaction(ref(db,path),r=>{
+     if(switching&&m===previous.mode&&gameInProgress(m,modeState(m,r)))throw Error(SWITCH_BLOCKED);
+     return codeOf(m,r)?pauseMode(m,r,now()):r;
+    },{applyLocally:false});
     if(path==='room')room=result.snapshot.val();else voyage=result.snapshot.val();
    }
    if((await read(broadcastPath))?.lease?.token!==token)throw Error('房間操作已更新，請重新整理。');
    if(clean){await update(ref(db),{room:{public:{broadcast:{version:1,mode,revision:(previous.revision||0)+1}}},voyage:null});return;}
    const createCode=create?Array.from(crypto.getRandomValues(new Uint8Array(6)),n=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[n%31]).join(''):undefined;
-   const next=transitionSession({room,voyage},mode,now(),{createCode,token});
+   const targetState=modeState(mode,mode==='classic'?room:voyage);
+   const restartTarget=switching&&(currentFinished||previous.status==='ended'||gameInProgress(mode,targetState)||(targetState?.status??targetState?.phase)==='ended');
+   const next=transitionSession({room,voyage},mode,now(),{createCode,token,restartTarget});
    if(finish&&next.room.public.state){
     endRoom(next.room,next.room.public.state.code);
     delete next.room.sessionPause;next.room.sessionActive=false;
