@@ -1,3 +1,4 @@
+import {validDuration} from './voyage-timing.js';
 import * as E from './voyage-engine.js';
 import {fingerprint} from './story-remote-model.js';
 import {islandLayout} from './affinity.js';
@@ -39,7 +40,7 @@ export function remoteCommand(r,action,value,expected,now=Date.now()){
  if(!r)return;hydrate(r);const s=r.hostOnly;
  if(expected&&(s.id!==expected.id||s.round!==expected.round||s.phase!==expected.phase))return;
  ingest(r);
- if(action==='next'){if(![15,45,60,90].includes(value))throw Error('請選擇有效作答時間');E.next(s,now,value);}
+ if(action==='next'){if(!validDuration(value))throw Error('請選擇有效作答時間');E.next(s,now,value);}
  else if(['begin','close','extend','revealFirst','twist','revealSecond'].includes(action))E[action](s,now);
  else if(action==='lock')r.locked=!r.locked;
  else if(action==='chat')r.chatOpen=!r.chatOpen;
