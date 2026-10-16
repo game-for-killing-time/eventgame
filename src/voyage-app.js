@@ -7,6 +7,8 @@ import './voyage-style.css';
 import './party-theme.css';
 import './voyage-theme.css';
 import {playerEntry,playerDetails} from './player-entry.js';
+import {playerInvitation} from './player-routing.js';
+import {joinPlayer,takePendingJoin} from './player-join.js';
 import './player-entry.css';
 import {paintIsland} from './voyage-island.js';
 import {voyage,traits} from './voyage-pack.js';
@@ -17,10 +19,10 @@ let uid=local?(params.get('player')||'local-player'):'',remote;
 document.body.classList.add('voyage-page');
 if(role==='host')document.body.classList.add('voyage-host');
 const KEY='hoho-voyage-local-v3';let rankKind='insight';let state,notice='',bad=false,key='',draft={choice:null,prediction:null,stance:'',second:null,text:'',consent:false},busy=false;
-const nameKey=local?'hoho-demo-name':'hoho-live-name';let entryRoomEdited=false;
+const nameKey=local?'hoho-demo-name':'hoho-live-name';let entryRoomEdited=false,resumeChecked=false;
 function playerEntrance(s){return `<section id="entry" class="entry">${playerEntry({room:local?'PARTY1':params.get('room')||s?.code||'',name:localStorage.getItem(nameKey)||'',busy,hint:!local&&(!remote||remote.loading)?'正在連線到小島…':!s?'主持人開好房間後，就可以一起入座。':isSurvival(s)&&s.round>0?'這場已開始；中途加入會先進觀戰席，下一場再一起挑戰。':''})}</section>`;}
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const link=(r,id)=>!local&&r!=='host'?`./${r==='display'?'display':'index'}.html`:r==='host'?`./host.html?mode=voyage${local?'&demo=1':''}`:`./story.html?${local?'demo=1&':''}role=${r}${local&&id?`&player=${encodeURIComponent(id)}`:!local&&state?`&room=${state.code}`:''}`;
+const link=(r,id)=>!local&&r!=='host'?(r==='display'?'./display.html':playerInvitation('voyage',state?.code)):r==='host'?`./host.html?mode=voyage${local?'&demo=1':''}`:`./story.html?${local?'demo=1&':''}role=${r}${local&&id?`&player=${encodeURIComponent(id)}`:!local&&state?`&room=${state.code}`:''}`;
 const btn=(id,text,disabled=false)=>`<button id="${id}" ${disabled||busy?'disabled':''}>${text}</button>`;
 const read=()=>{if(!local)return remote?.state||null;try{return JSON.parse(localStorage.getItem(KEY)||'null');}catch{return null;}};
 const fail=e=>{notice=/permission|PERMISSION/i.test(e.message||'')?'讀寫權限被拒絕，請確認房間及 Firebase 規則設定。':e.message||String(e);bad=true;render();};
@@ -83,7 +85,20 @@ let timing=false,retryAt=0;async function tick(){const s=state;if(!s)return;cons
  if(!ready||role!=='host'||busy||timing||Date.now()<retryAt||!local&&(!remote?.online||!remote.hostReady))return;
  timing=true;try{if(local)await mutate(r=>{E.autoAdvance(r);});else await remote.command('autoAdvance');}catch(e){retryAt=Date.now()+3000;fail(e);}finally{timing=false;}}
 addEventListener('storage',e=>{if(e.key===KEY)render();});setInterval(tick,250);render();
-if(!local){try{const {startVoyageOnline}=await import('./voyage-online-runtime.js');remote=await startVoyageOnline(role,()=>{if(remote){uid=remote.uid;render();}},fail);uid=remote.uid;render();}catch(e){fail(e);}}
+if(!local){try{const {startVoyageOnline}=await import('./voyage-online-runtime.js');remote=await startVoyageOnline(role,()=>{if(remote){uid=remote.uid;render();resumeJoin();}},fail);uid=remote.uid;render();resumeJoin();}catch(e){fail(e);}}
+
+async function joinRoom({code,name}){
+ if(!remote||remote.loading)throw Error('正在連線，請稍後再試。');
+ if(!await joinPlayer('voyage',remote,code,name))return;
+ localStorage.setItem(nameKey,name);
+}
+function resumeJoin(){
+ if(resumeChecked||role!=='player'||!remote?.online||remote.loading)return;
+ resumeChecked=true;const pending=takePendingJoin('voyage',params.get('room'));
+ if(!pending)return;
+ if(document.getElementById('joinForm')){document.getElementById('roomCode').value=pending.code;document.getElementById('nickname').value=pending.name;}
+ onlineWork(()=>joinRoom(pending));
+}
 
 function bindDrafts(){
  document.querySelectorAll('input[type=radio]').forEach(input=>input.onchange=()=>{draft.touched=true;draft[input.name]=input.name==='stance'?input.value:+input.value;if(input.name==='stance')document.getElementById('secondChoices').hidden=input.value!=='change';else if(input.name!=='prediction'){document.querySelectorAll(`input[name="${input.name}"]`).forEach(i=>{i.closest('label').classList.toggle('selected',i.checked);i.closest('label').querySelector('i').textContent=i.checked?'✓':'';});}});
@@ -106,7 +121,7 @@ function bindOnline(){
  const next=document.getElementById('next');if(next)next.onclick=()=>{const duration=+document.getElementById('duration').value;onlineWork(()=>remote.command('next',duration));};
  on('chatToggle',()=>remote.command('chat'));const clean=document.getElementById('clean');if(clean)clean.onclick=()=>{const checked=document.getElementById('cleanCheck')?.checked;onlineWork(()=>{if(!checked)throw Error('請先勾選備份與清理確認');return remote.command('clean');});};
  on('copy',()=>navigator.clipboard.writeText(new URL(link('player'),location.href).href));
- form('joinForm',()=>{const {code,name}=playerDetails(document.getElementById('joinForm'));return async()=>{if(!remote||remote.loading)throw Error('正在連線，請稍後再試。');await remote.join(code,name);localStorage.setItem(nameKey,name);};});
+ form('joinForm',()=>{const details=playerDetails(document.getElementById('joinForm'));return()=>joinRoom(details);});
  document.querySelectorAll('[data-route]').forEach(b=>b.onclick=()=>onlineWork(()=>remote.send('routes',{route:b.dataset.route}),'伺服器已確認路線。'));
  const submit=document.getElementById('submit');if(submit)submit.onclick=()=>{const a={choice:draft.choice,prediction:state.target===uid?-1:draft.prediction};onlineWork(()=>{if(a.choice===null||a.prediction===null)throw Error('請完成自己的答案與猜測');return remote.send('first',a);},'伺服器已確認：已提交。');};
  const second=document.getElementById('submitSecond');if(second)second.onclick=()=>{const a={stance:draft.stance,choice:draft.stance==='keep'?state.first[uid]?.choice:draft.stance==='depends'?-1:draft.second,text:draft.text,consent:draft.consent};onlineWork(()=>{if(!a.stance||a.choice===undefined||a.choice===null)throw Error('請選擇現在的想法');return remote.send('second',a);},'伺服器已確認小變化答案。');};

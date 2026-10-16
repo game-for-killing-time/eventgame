@@ -21,6 +21,8 @@ import {config} from '../config.js';
 import {pageLink} from './navigation.js';
 import {characterId,characterMarkup} from './characters.js';
 import {playerEntry,playerDetails} from './player-entry.js';
+import {playerInvitation} from './player-routing.js';
+import {joinPlayer,takePendingJoin} from './player-join.js';
 import './player-entry.css';
 
 const role=document.body.dataset.role||'viewer', $=id=>document.getElementById(id);
@@ -28,10 +30,10 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const labels={waiting:'等大家入座',thinking:'主角正在思考',open:'開放作答',closed:'已截止，等待揭曉',revealed:'答案揭曉・聊聊吧',ended:'今晚先到這裡'};
 let api,pub=null,privateRoom={},hostReady=false,choice=null,prediction=null,answerRound=null,ack='',sending=false,autoRevealing=false,autoRevealRetryAt=0;
 let ownAnswer=null,advancing=false,advanceRetryAt=0;
-let joining=false;
+let joining=false,publicReady=false,resumeChecked=false;
 let privateUnsub=()=>{},ownUnsub=()=>{},modUnsub=()=>{},moderation={},chatUnsubs=new Map(),chatData={},privateRound=null;
 const explicitDemo=new URLSearchParams(location.search).get('demo')==='1';
-const link=(page,room='')=>pageLink(page,{demo:explicitDemo,room:page==='index'&&!explicitDemo?'':room});
+const link=(page,room='')=>page==='index'&&!explicitDemo?playerInvitation('classic',room):pageLink(page,{demo:explicitDemo,room});
 const storagePrefix=explicitDemo||!config.firebase?'hoho-demo':'hoho-live';
 let savedCode=new URLSearchParams(location.search).get('room')||localStorage.getItem(`${storagePrefix}-room`)||'';
 let rankBoard='insight';
@@ -91,8 +93,25 @@ function entry(){
  document.body.classList.toggle('player-entry',!joined);
  $('entry').hidden=!!joined;
  if(!joined&&!$('joinForm'))$('entry').innerHTML=playerEntry({room:savedCode,name:localStorage.getItem(`${storagePrefix}-name`)||''});
- if($('joinForm'))$('joinForm').onsubmit=e=>{e.preventDefault();if(joining)return;act(async()=>{const form=$('joinForm'),{code,name}=playerDetails(form),submit=form.querySelector('button');joining=true;submit.disabled=true;submit.textContent='正在加入…';form.setAttribute('aria-busy','true');try{await api.join(code,name);notice('已加入房間。');savedCode=code;localStorage.setItem(`${storagePrefix}-room`,code);localStorage.setItem(`${storagePrefix}-name`,name);entry();render();watchOwn();syncChats();}finally{joining=false;submit.disabled=false;submit.textContent='加入派對';form.setAttribute('aria-busy','false');}});};
+ if($('joinForm'))$('joinForm').onsubmit=e=>{e.preventDefault();act(()=>joinRoom(playerDetails($('joinForm'))));};
  }
+}
+async function joinRoom({code,name}){
+ if(joining)return;
+ const form=$('joinForm'),submit=form?.querySelector('button');joining=true;
+ if(submit){submit.disabled=true;submit.textContent='正在加入…';form.setAttribute('aria-busy','true');}
+ try{
+  if(api.mode.startsWith('本機'))await api.join(code,name);
+  else if(!await joinPlayer('classic',api,code,name))return;
+  notice('已加入房間。');savedCode=code;localStorage.setItem(`${storagePrefix}-room`,code);localStorage.setItem(`${storagePrefix}-name`,name);entry();render();watchOwn();syncChats();
+ }finally{joining=false;if(submit){submit.disabled=false;submit.textContent='加入派對';form.setAttribute('aria-busy','false');}}
+}
+function resumeJoin(){
+ if(resumeChecked||role!=='viewer'||!api||!publicReady||api.mode.startsWith('本機')||$('connection').dataset.state!=='online')return;
+ resumeChecked=true;const pending=takePendingJoin('classic',new URLSearchParams(location.search).get('room'));
+ if(!pending)return;
+ if($('joinForm')){$('roomCode').value=pending.code;$('nickname').value=pending.name;}
+ act(()=>joinRoom(pending));
 }
 function eligible(){return role==='viewer'&&pub?.members?.[api.uid()]&&savedCode===pub?.state?.code&&!moderation.removed;}
 function render(){
@@ -237,14 +256,14 @@ function renderChat(){if(!$('messages'))return;const msgs=Object.entries(chatDat
  document.querySelectorAll('[data-delete]').forEach(b=>b.onclick=()=>act(()=>api.command('deleteMessage',{uid:b.dataset.delete,id:b.dataset.id})));
 }
 try{
- api=await connect(role,s=>{const lamp=$('connection');lamp.querySelector('.connection-label').textContent=s;lamp.title=s;lamp.dataset.state=s==='已連線'||s==='本機模擬連線'?'online':'offline';if(s==='已連線'&&api)ensureMigration();});
+ api=await connect(role,s=>{const lamp=$('connection');lamp.querySelector('.connection-label').textContent=s;lamp.title=s;lamp.dataset.state=s==='已連線'||s==='本機模擬連線'?'online':'offline';if(s==='已連線'&&api){ensureMigration();resumeJoin();}});
  const isDemo=api.mode.startsWith('本機');$('mode').hidden=!isDemo;
  if(isDemo&&role==='host'){const tools=document.createElement('div');tools.className='spotlight-settings';tools.innerHTML='<p>僅本機試玩工具 · 不會加入 Firebase 房間</p><button id="demoParticipants">加入三位示範玩家</button> <button id="demoAnswers">補齊示範玩家答案</button>';document.querySelector('.room-management').before(tools);on('demoParticipants',()=>api.command('demoParticipants'));on('demoAnswers',()=>api.command('demoAnswers'));}
  $('mode').textContent=isDemo?'試玩示範 · 只在這個瀏覽器同步，不是多人連線。主持頁建立 PARTY1 即可試玩。':'';
  if(role==='viewer'||role==='display'){const e=document.createElement('section');e.id='partyEffects';e.hidden=true;document.body.append(e);updateEffects=createEffects(api,role,e,message=>notice(message,true));}
  on('toggleChatEffects',()=>api.command('chatEffects',pub?.state?.chatEffects!==true));on('toggleSubmitEffects',()=>api.command('submitEffects',pub?.state?.submitEffects!==true));
  if(role==='host'){hostReady=await api.checkHost().catch(e=>{notice(friendly(e),true);return false;});watchPrivate();}
- api.watch('room/public',p=>{p=p?.state?p:null;const previous=pub?.state,wasMember=!!pub?.members?.[api.uid()],isMember=!!p?.members?.[api.uid()];pub=p;if(role==='viewer'&&wasMember&&!isMember&&previous?.code===p?.state?.code)notice('你已被主持人移出房間，可以輸入房間碼重新加入。');const changed=p?.state?.round!==previous?.round||p?.state?.code!==previous?.code||p?.state?.attempt!==previous?.attempt;if(p?.state?.code!==previous?.code){unread=0;chatInitialized=false;seenMessages.clear();migrationCode=null;relayed.clear();}if(changed){ownAnswer=null;choice=null;prediction=null;ack='';answerRound=p?.state?.round;}render();if(!p&&$('create'))$('create').disabled=false;if(hostReady&&(privateRound!==p?.state?.round||changed))watchPrivate();if(changed||wasMember!==isMember||(!previous&&p))watchOwn();syncChats();},e=>notice(friendly(e),true));
+ api.watch('room/public',p=>{p=p?.state?p:null;const previous=pub?.state,wasMember=!!pub?.members?.[api.uid()],isMember=!!p?.members?.[api.uid()];pub=p;publicReady=true;if(role==='viewer'&&wasMember&&!isMember&&previous?.code===p?.state?.code)notice('你已被主持人移出房間，可以輸入房間碼重新加入。');const changed=p?.state?.round!==previous?.round||p?.state?.code!==previous?.code||p?.state?.attempt!==previous?.attempt;if(p?.state?.code!==previous?.code){unread=0;chatInitialized=false;seenMessages.clear();migrationCode=null;relayed.clear();}if(changed){ownAnswer=null;choice=null;prediction=null;ack='';answerRound=p?.state?.round;}render();if(!p&&$('create'))$('create').disabled=false;if(hostReady&&(privateRound!==p?.state?.round||changed))watchPrivate();if(changed||wasMember!==isMember||(!previous&&p))watchOwn();syncChats();resumeJoin();},e=>notice(friendly(e),true));
  on('create',()=>api.create());on('lock',()=>api.command('lock',!pub.state.locked));on('toggleChat',()=>api.command('chatOpen',!pub.state.chatOpen));on('end',async()=>{await api.command('end');notice('房間已結束，紀錄仍保留；需要時可再清理資料。');});on('clean',async()=>{if(confirm('永久清理這個已結束房間的答案、聊天、故事和分數？'))await api.command('clean');});
  on('skipTarget',()=>api.command('skipTarget',{...pub.state}));on('start',async()=>{if(isSpotlight(pub.state)){if(questionPlanBusy)return;const request=questionPlanRequest();questionPlanBusy=true;renderHost();try{await api.command('startNext',request);}finally{questionPlanBusy=false;renderHost();}return;}const q=questionPicker.selected();if(!q)throw new Error('請先選擇一道符合篩選的題目。');return api.command('start',q);});for(const action of ['close','reveal'])on(action,()=>api.command(action,{...pub.state}));
  on('logout',async()=>{await api.logout();location.reload();});

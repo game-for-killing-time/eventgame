@@ -34,7 +34,7 @@ export async function startVoyageOnline(role,changed,failed){
  }
  function hostWatch(){stops.push(api.watch('voyage',r=>{host=r;sync();state();},fail));}
  api=await voyageConnect(role,x=>{rt.online=x;changed();});rt.uid=api.uid();
- rt.now=api.now;rt.expected=()=>pub?{id:pub.id,round:pub.round,phase:pub.phase}:null;
+ rt.get=api.get;rt.now=api.now;rt.expected=()=>pub?{id:pub.id,round:pub.round,phase:pub.phase}:null;
  rt.login=async(email,password)=>{await api.login(email,password);rt.uid=api.uid();rt.hostReady=true;hostWatch();subscriptions();state();};
  rt.logout=async()=>{stops.forEach(f=>f());await api.logout();location.reload();};
  rt.create=()=>api.create();rt.command=(action,value)=>api.command(action,value,rt.expected());
