@@ -13,7 +13,7 @@ const first=(db,id,p,choice=0,prediction=0)=>send(db,id,'first',p.round,{choice,
 const second=(db,id,p,a={})=>send(db,id,'second',p.round,{stance:'keep',choice:0,text:'',consent:false,...a});
 const observe=(db,path,check)=>new Promise((resolve,reject)=>{let stop=()=>{};const timer=setTimeout(()=>{stop();reject(Error(`sync timeout ${path}`));},7000);stop=onValue(ref(db,path),s=>{if(check(s.val())){clearTimeout(timer);queueMicrotask(stop);resolve(s.val());}},reject);});
 before(async()=>{env=await initializeTestEnvironment({projectId:'demo-hoho',database:{host:'127.0.0.1',port:9000,rules:readFileSync('database.rules.json','utf8')}});});after(async()=>env?.cleanup());
-beforeEach(async()=>{await env.clearDatabase();await seed(async db=>{const r=createVoyage('VOYAGE');r.hostOnly.id='test-game';r.public.id='test-game';await set(ref(db),{config:{hostUid:'host'},voyage:r});});});
+beforeEach(async()=>{await env.clearDatabase();await seed(async db=>{const r=createVoyage('VOYAGE',Date.now(),'last-light-v2');r.hostOnly.id='test-game';r.public.id='test-game';await set(ref(db),{config:{hostUid:'host'},voyage:r});});});
 test('10 independent clients: 12 scenes, target rotation, E choice, sync, overwrite, retries, reload, endings',async()=>{
  const clients=Array.from({length:10},(_,i)=>({id:`p${i}`,db:client(`p${i}`)}));await Promise.all(clients.map((c,i)=>join(c.db,c.id,i)));await cmd('sync');
  for(let n=1;n<=12;n++){
@@ -49,7 +49,7 @@ test('chat cooling, length, moderation, seat ownership and target removal',async
  const a=client('a'),b=client('b');await join(a,'a',0);await join(b,'b',1);await cmd('sync');
  const chat=(text,seq=1)=>update(ref(a,'voyage/chat/a'),{seq,lastSent:serverTimestamp(),[`messages/${seq}`]:{game:'test-game',text,at:serverTimestamp()}});
  await assertFails(chat('x'.repeat(301)));await chat('hello');await assertFails(chat('fast',2));await assertFails(get(ref(b,'voyage/chat/a/messages')));await get(query(ref(b,'voyage/chat/a/messages'),orderByChild('at'),limitToLast(3)));await assertFails(get(ref(obs(),'voyage/chat/a/messages')));
- await cmd('mute','a');await seed(db=>set(ref(db,'voyage/chat/a/lastSent'),1));await assertFails(chat('muted',2));await cmd('next',60);await cmd('remove','a');await assertFails(first(a,'a',await pub()));await assertFails(join(a,'a',0));assert.equal((await pub()).island.positions?.a,undefined);await cmd('twist');await cmd('close');await cmd('revealSecond');await cmd('next',60);assert.equal((await pub()).target,'b');
+ await cmd('mute','a');await seed(db=>set(ref(db,'voyage/chat/a/lastSent'),1));await assertFails(chat('muted',2));await cmd('next',60);await cmd('remove','a');await assertFails(first(a,'a',await pub()));assert.equal((await pub()).island.positions?.a,undefined);await cmd('twist');await cmd('close');await cmd('revealSecond');await cmd('next',60);assert.equal((await pub()).target,'b');
 });
 
 test('wrong guesses still gain affinity from own answers, late join, reconnect and identical public positions',async()=>{
@@ -58,4 +58,26 @@ test('wrong guesses still gain affinity from own answers, late join, reconnect a
  const r=(await get(ref(host(),'voyage'))).val();assert.equal(r.hostOnly.players.a.points,0);assert.equal(r.hostOnly.players.b.points,0);assert.equal(r.hostOnly.affinity.pairs.a.b.same,2);assert.equal(r.public.island.positions.b.x-r.public.island.positions.a.x,96);
  goOffline(b);goOnline(b);const restored=await observe(b,'voyage/public',p=>p?.round===2);assert.deepEqual(restored.island,r.public.island);
  const c=client('c');await join(c,'c',2);await cmd('sync');await cmd('next',60);assert.equal((await pub()).target,'c');await cmd('begin');await first(a,'a',await pub());await cmd('close');await cmd('revealFirst');assert.equal((await pub()).view.guessResult.choice,undefined);assert.equal((await get(ref(host(),'voyage/hostOnly/affinity/pairs/a/b/same'))).val(),2);
+});
+for(const outcome of ['good','partial','bad'])test(`survival multiplayer: ${outcome} ending, real groups, elimination, reconnect and no revival`,async()=>{
+ await seed(async db=>{const r=createVoyage('VOYAGE');r.hostOnly.id='test-game';r.public.id='test-game';await set(ref(db,'voyage'),r);});
+ const clients=Array.from({length:4},(_,i)=>({id:`s${i}`,db:client(`s${i}`)}));await Promise.all(clients.map((c,i)=>join(c.db,c.id,i)));await cmd('sync');
+ const advance=()=>runTransaction(ref(host(),'voyage'),r=>r?remoteCommand(r,'autoAdvance',null,undefined,r.hostOnly.deadline):null,{applyLocally:false});
+ await cmd('next',60);
+ for(let n=1;n<=12;n++){
+  await advance();let p=await pub();if(p.phase==='routing'){await send(clients.find(c=>c.id===p.target).db,p.target,'routes',n,{route:p.routes[0].id});await advance();p=await pub();}
+  const live=clients.filter(c=>p.players[c.id].alive!==false);
+  for(const c of live){const dangerous=n===4&&(outcome==='bad'||outcome==='partial'&&c.id==='s0');const choice=dangerous?1:(n===3||n===7)&&['s1','s3'].includes(c.id)?1:0;await first(c.db,c.id,p,choice,0);}
+  await advance();p=await pub();assert.equal(p.phase,'revealed');await advance();assert.equal((await pub()).phase,'twistIntro');await advance();p=await pub();
+  for(const c of live){const choice=(await get(ref(c.db,`voyage/inputs/first/${n}/${c.id}`))).val().choice;await second(c.db,c.id,p,{choice});}
+  await advance();p=await pub();
+  if(n===4&&outcome==='partial'){
+   assert.equal(p.players.s0.alive,false);const points=p.players.s0.points;
+   await cmd('remove','s0');await join(clients[0].db,'s0',0);await cmd('sync');p=await pub();assert.equal(p.players.s0.alive,false);assert.equal(p.players.s0.points,points);
+  }
+  if(p.phase==='ended')break;await advance();assert.equal((await pub()).phase,'intro');
+ }
+ const p=await pub();assert.equal(p.phase,'ended');assert.equal(p.view.survival.outcome,outcome);assert.equal(p.view.survival.alive?.length||0,outcome==='good'?4:outcome==='partial'?3:0);assert.equal(p.view.survival.dead?.length||0,outcome==='good'?0:outcome==='partial'?1:4);
+ const fromReload=(await get(ref(client('s0'),'voyage/public'))).val();assert.equal(fromReload.view.survival.outcome,outcome);
+ const before=fingerprint((await get(ref(host(),'voyage'))).val());await cmd('autoAdvance');assert.equal(fingerprint((await get(ref(host(),'voyage'))).val()),before);
 });
