@@ -1,4 +1,5 @@
 import './spotlight.css';
+import {setEntryVideo} from './player-entry-video.js';
 import {isSpotlight,nextSpotlight,targetFirst} from './spotlight.js';
 import {spotlightQuestion} from './spotlight-view.js';
 import {countdown,createSpotlightReveal} from './spotlight-presentation.js';
@@ -83,6 +84,7 @@ function entry(){
  if($('loginForm'))$('loginForm').onsubmit=e=>{e.preventDefault();act(async()=>{await api.login($('email').value,$('password').value);hostReady=true;watchPrivate();entry();render();});};
  }else{
  const joined=pub?.members?.[api.uid()]&&savedCode===pub?.state?.code;
+ setEntryVideo(!joined);
  $('entry').hidden=!!joined;
  if(!joined&&!$('joinForm'))$('entry').innerHTML=`<form id="joinForm" aria-labelledby="joinTitle"><h1 id="joinTitle" class="join-title">一起上島。</h1><p class="join-intro">輸入房間碼和暱稱，就能加入派對。</p><label for="roomCode">房間碼</label><input id="roomCode" maxlength="6" pattern="[A-Za-z0-9]{6}" value="${esc(savedCode)}" placeholder="輸入 6 位房間碼" autocomplete="off" autocapitalize="characters" spellcheck="false" required><label for="nickname">暱稱</label><input id="nickname" maxlength="20" value="${esc(localStorage.getItem(`${storagePrefix}-name`)||'')}" placeholder="大家怎樣稱呼你？" autocomplete="nickname" required><button class="primary">加入派對</button><p class="hint">毋須註冊，入座後會獲派一位島民。</p></form>`;
  if($('joinForm'))$('joinForm').onsubmit=e=>{e.preventDefault();act(async()=>{const code=$('roomCode').value.trim().toUpperCase(),name=$('nickname').value.trim();if(!name)throw Error('請輸入暱稱。');await api.join(code,name);notice('已加入房間。');savedCode=code;localStorage.setItem(`${storagePrefix}-room`,code);localStorage.setItem(`${storagePrefix}-name`,name);entry();render();watchOwn();syncChats();});};
