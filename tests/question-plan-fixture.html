@@ -1,9 +1,13 @@
 <!doctype html><html lang="zh-Hant"><meta charset="utf-8"><title>自動題單本機測試</title>
-<h1>本機題單測試，不連線 Firebase</h1><button id="seed">備份並建立三人待開始房間</button><button id="restore">還原測試前資料</button><p id="state"></p>
+<h1>本機題單測試，不連線 Firebase</h1><button id="empty">備份並測試未建立房間</button><button id="seed">備份並建立三人待開始房間</button><button id="restore">還原測試前資料</button><p id="state"></p>
 <script type="module">
 import {newRoom} from '../src/game.js';
 if(!['127.0.0.1','localhost'].includes(location.hostname))throw Error('Local only');
 const key='hoho-spotlight-demo-v1',backup='hoho-plan-fixture-backup';
+document.querySelector('#empty').onclick=()=>{
+ if(!localStorage.getItem(backup))localStorage.setItem(backup,JSON.stringify({value:localStorage.getItem(key)}));
+ localStorage.removeItem(key);document.querySelector('#state').textContent='未建立房間測試已準備';
+};
 document.querySelector('#seed').onclick=()=>{
  if(!localStorage.getItem(backup))localStorage.setItem(backup,JSON.stringify({value:localStorage.getItem(key)}));
  const r=newRoom('PARTY1');for(let i=0;i<3;i++)r.public.members['demo-friend-'+i]={name:['示範小美','示範阿樂','示範琪琪'][i],seat:String(i),code:'PARTY1',joined:i+1,demo:true};

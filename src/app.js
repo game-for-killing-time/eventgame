@@ -103,7 +103,7 @@ function render(){
  updateEffects(pub,role==='display'||joined);
  updateReveal(pub,role==='display'||!!joined);
  if(role==='host')updateInvite({url:s?new URL(link('index',s.code),location.href).href:'',available:hostReady&&!!s&&s.status!=='ended',demo:explicitDemo||!config.firebase,local:['localhost','127.0.0.1'].includes(location.hostname),locked:s?.locked});
- if(role==='host'&&!s){const m=document.querySelector('.room-management');m.querySelector('h2').textContent='房間管理與登出';}
+ if(role==='host'&&!s){const m=document.querySelector('.room-management');m.querySelector('h2').textContent='房間管理與登出';$('manualQuestionPicker').hidden=true;$('automaticQuestionPicker').hidden=false;automaticPicker.sync(null,null);}
  if(role==='viewer'){for(const id of ['viewerStatus','playerTabs','chatEntry','islandArea'])$(id).hidden=!joined;document.body.classList.toggle('in-room',!!joined);if(joined){$('viewerStatus').innerHTML=`<span class="viewer-identity"><span class="player-avatar">${characterMarkup(characterId(api.uid(),s.code))}</span><b>${esc(pub.members[api.uid()].name)}</b></span>`;updateIsland(pub,api.uid());}}
  if(!s){if($('reveal'))$('reveal').hidden=true;if($('hiddenScores')){$('hiddenScores').hidden=true;$('hiddenScores').replaceChildren();$('spotlightSettings').hidden=true;}if($('affinityPanel')){$('affinityPanel').hidden=true;$('affinityRows').textContent='';}if(role==='display')renderDisplayWelcome($('game'),new URL(link('index'),location.href).href);else replace('game','<div class="empty"><span class="big-mark">◒</span><h1>小桌還沒開場</h1><p>主持人開好房間後，就可以一起入座。</p></div>');if($('social'))$('social').hidden=true;if(hostReady){for(const id of ['lock','toggleChat','toggleChatEffects','toggleSubmitEffects','end','clean','start','skipTarget','close','reveal'])$(id).disabled=true;$('submitted').textContent='等待開場';$('roomLinks').innerHTML='<b>還沒有房間</b><span>建立房間後，邀請朋友入座。</span>';$('hostGuide').textContent='先建立房間，再選一道暖場題。';$('members').textContent='';$('stories').textContent='';}return;}
  const spotlight=isSpotlight(s),result=pub.results?.[s.round], isOpen=s.status==='open'&&api.now()<s.deadline, count=Object.keys(pub.members||{}).length;
@@ -173,8 +173,8 @@ if(role==='host'){
 const questionPicker=role==='host'?createQuestionPicker($('questionPick'),()=>renderHost()):null;
 const automaticPicker=role==='host'?createAutomaticQuestionPicker($('automaticQuestionPicker'),()=>act(()=>saveQuestionPlan())):null;
 let questionPlanBusy=false;
-function questionPlanRequest(){return {category:automaticPicker.category(),questionsPerCycle:Number($('cycleQuestions').value),cycles:Number($('cycleCount').value),expected:{...pub.state}};}
-async function saveQuestionPlan(){if(questionPlanBusy)return;const request=questionPlanRequest();questionPlanBusy=true;renderHost();try{await api.command('prepareQuestions',request);}finally{questionPlanBusy=false;renderHost();}}
+function questionPlanRequest(){if(!pub?.state)throw Error('請先建立房間，再設定題單。');return {category:automaticPicker.category(),questionsPerCycle:Number($('cycleQuestions').value),cycles:Number($('cycleCount').value),expected:{...pub.state}};}
+async function saveQuestionPlan(){if(questionPlanBusy)return;if(!pub?.state){automaticPicker.sync(null,null);return;}const request=questionPlanRequest();questionPlanBusy=true;renderHost();try{await api.command('prepareQuestions',request);}finally{questionPlanBusy=false;renderHost();}}
 function renderHost(){
  if(!pub?.state)return;const s=pub.state;
  renderAffinity();

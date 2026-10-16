@@ -6,9 +6,12 @@ export function createAutomaticQuestionPicker(container,onChange){
  const select=container.querySelector('select'),count=container.querySelector('p'),preview=container.querySelector('details'),body=preview.querySelector('div');
  for(const c of questionCategories){const option=document.createElement('option');option.value=c.id;option.textContent=c.name;select.append(option);}
  select.onchange=onChange;
+ select.disabled=true;preview.hidden=true;
+ count.textContent='先建立房間，再選擇分類及自動抽題。';
  return {
   category:()=>select.value,
   sync(s,plan){
+   if(!s){select.disabled=true;select.value='';preview.hidden=true;body.replaceChildren();count.textContent='先建立房間，再選擇分類及自動抽題。';return;}
    if(plan)select.value=plan.category;
    const locked=!!plan&&s.round>plan.startRound;
    select.disabled=locked||!['waiting','revealed'].includes(s.status)||s.completed===true;
