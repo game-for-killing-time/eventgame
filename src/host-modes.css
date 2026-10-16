@@ -4,3 +4,4 @@ body.voyage-host main{max-width:1240px;padding:24px}body.voyage-host .host-desk{
 body.voyage-host #create,body.voyage-host #next,body.voyage-host #begin{background:#197e90;color:white;border-color:#197e90}
 
 .broadcast-control{margin-left:auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap}.broadcast-control small{display:block}@media(max-width:600px){.broadcast-control{margin-left:0;width:100%}}
+.mode-confirm{max-width:min(480px,90vw);border:1px solid #d9cba9;border-radius:20px;padding:28px;background:#fffaf0;color:#16545c}.mode-confirm::backdrop{background:#0008}.mode-confirm p{line-height:1.8}.mode-confirm .toolbar{display:flex;gap:12px;justify-content:flex-end}.host-mode-switch a[aria-disabled="true"]{opacity:.6}

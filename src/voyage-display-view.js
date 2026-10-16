@@ -12,7 +12,7 @@ function choiceFeed(s){
 
 function survivors(s){
  const players=Object.values(s.players||{}).filter(p=>p.alive!==false&&!p.spectator).sort((a,b)=>(a.seat??0)-(b.seat??0));
- return `<aside class="panel voyage-live-panel" aria-label="仍在生存的玩家"><div class="voyage-roster-heading"><h2>仍在生存的玩家</h2><strong>${players.length}<small> 人</small></strong></div>${players.length?`<ul class="voyage-survivors">${players.map(p=>`<li><img src="./art/characters/${Math.abs(Number(p.seat)||0)%10}.png" alt=""><span>${esc(p.name)}</span></li>`).join('')}</ul>`:`<p class="voyage-roster-empty">${s.phase==='lobby'?'等待玩家加入小島。':s.outcome==='bad'?'已無生還玩家。':'目前沒有生還玩家。'}</p>`}<p class="voyage-roster-note">${s.phase==='lobby'?'一起登島，準備出發。':s.phase==='ended'?'這趟冒險，走到這裡。':'每一個選擇，都會帶大家走向下一幕。'}</p></aside>`;
+ return `<aside class="panel voyage-live-panel" aria-label="仍在生存的玩家"><div class="voyage-roster-heading"><h2>仍在生存的玩家</h2><strong>${players.length}<small> 人</small></strong></div>${players.length?`<ul class="voyage-survivors">${players.map(p=>`<li><img src="./art/characters/${p.character??Math.abs(Number(p.seat)||0)%10}.png" alt=""><span>${esc(p.name)}</span></li>`).join('')}</ul>`:`<p class="voyage-roster-empty">${s.phase==='lobby'?'等待玩家加入小島。':s.outcome==='bad'?'已無生還玩家。':'目前沒有生還玩家。'}</p>`}<p class="voyage-roster-note">${s.phase==='lobby'?'一起登島，準備出發。':s.phase==='ended'?'這趟冒險，走到這裡。':'每一個選擇，都會帶大家走向下一幕。'}</p></aside>`;
 }
 
 export function voyageDisplayView(s){

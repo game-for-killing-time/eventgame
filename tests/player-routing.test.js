@@ -91,12 +91,13 @@ test('read failures propagate instead of being reported as an unknown room code'
  }}),error=>error===denied);
 });
 
-test('invitations keep the requested mode and safely encode the exact room code',()=>{
- assert.equal(playerInvitation('voyage','VOYAG1'),'./index.html?mode=voyage&room=VOYAG1');
- assert.equal(playerInvitation('classic'),'./index.html?mode=classic');
- assert.equal(playerInvitation('invalid'),'./index.html?mode=classic');
+test('invitations stay identical across modes and safely encode the exact room code',()=>{
+ assert.equal(playerInvitation('voyage','VOYAG1'),'./index.html?room=VOYAG1');
+ assert.equal(playerInvitation('classic'),'./index.html');
+ assert.equal(playerInvitation('invalid'),'./index.html');
  const url=new URL(playerInvitation('voyage','A&B =?'),'https://example.test/game/');
  assert.equal(url.pathname,'/game/index.html');
- assert.equal(url.searchParams.get('mode'),'voyage');
+ assert.equal(url.searchParams.get('mode'),null);
+ assert.equal(playerInvitation('classic','ABC234'),playerInvitation('voyage','ABC234'));
  assert.equal(url.searchParams.get('room'),'A&B =?');
 });

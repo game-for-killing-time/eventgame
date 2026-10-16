@@ -23,7 +23,7 @@ for(const [source,target] of [['classic','voyage'],['voyage','classic']]){
   assert.equal(joined,false);
   assert.deepEqual(api.joins,[]);
   assert.deepEqual(api.reads,[roomCodePath(source),roomCodePath(target)]);
-  assert.deepEqual(destinations,[`./index.html?mode=${target}&room=ABC234`]);
+  assert.deepEqual(destinations,[`./index.html?room=ABC234`]);
   assert.deepEqual(JSON.parse([...storage.entries.values()][0]),{mode:target,code:'ABC234',name:'阿樂',at:1000});
   assert.deepEqual(takePendingJoin(target,'abc234',{storage,now:()=>1001}),{code:'ABC234',name:'阿樂'});
   assert.equal(takePendingJoin(target,'ABC234',{storage,now:()=>1002}),null);

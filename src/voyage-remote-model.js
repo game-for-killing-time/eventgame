@@ -1,3 +1,4 @@
+import {characterId} from './characters.js';
 import {validDuration} from './voyage-timing.js';
 import * as E from './voyage-engine.js';
 import {fingerprint} from './story-remote-model.js';
@@ -26,8 +27,8 @@ export function ingest(r){hydrate(r);const s=r.hostOnly;
  for(const [round,entries]of Object.entries(r.quoteConsent))for(const [id,c]of Object.entries(entries)){if(c.game!==s.id)continue;const e=s.players[id]?.events.find(x=>x.round===Number(round));if(e)E.consent(s,id,Number(round),c.share);}
  return r;
 }
-export function project(r){hydrate(r);const s=r.hostOnly,v=E.publicView(s);delete v.quotes;delete v.cards;
- r.public={id:s.id,version:3,packId:s.packId||null,code:r.code,locked:!!r.locked,chatOpen:r.chatOpen!==false,phase:s.phase,outcome:s.outcome||null,round:s.round,deadline:s.deadline,duration:s.duration,target:s.target||'',cast:s.cast,currentQuestion:s.currentQuestion||null,routes:E.scene(s)?.routes?.map(x=>({id:x.id,name:x.name}))||[],players:Object.fromEntries(Object.entries(s.players).map(([id,p])=>[id,{name:p.name,seat:p.seat,points:p.points,alive:p.alive!==false,spectator:!!p.spectator,group:p.group||'red',deathRound:p.deathRound||null,deathReason:p.deathReason||null,misunderstood:E.misunderstoodScore(s,id)}])),island:s.island,submitted:Object.keys(s.phase==='routing'?s.routes:s.phase==='twist'||s.phase==='twistClosed'?s.second:s.first).length,view:v};
+export function project(r){hydrate(r);const s=r.hostOnly;for(const [id,p]of Object.entries(s.players))p.character=characterId(id,r.code);const v=E.publicView(s);delete v.quotes;delete v.cards;
+ r.public={id:s.id,version:3,packId:s.packId||null,code:r.code,locked:!!r.locked,chatOpen:r.chatOpen!==false,phase:s.phase,outcome:s.outcome||null,round:s.round,deadline:s.deadline,duration:s.duration,target:s.target||'',cast:s.cast,currentQuestion:s.currentQuestion||null,routes:E.scene(s)?.routes?.map(x=>({id:x.id,name:x.name}))||[],players:Object.fromEntries(Object.entries(s.players).map(([id,p])=>[id,{name:p.name,seat:p.seat,character:characterId(id,r.code),points:p.points,alive:p.alive!==false,spectator:!!p.spectator,group:p.group||'red',deathRound:p.deathRound||null,deathReason:p.deathReason||null,misunderstood:E.misunderstoodScore(s,id)}])),island:s.island,submitted:Object.keys(s.phase==='routing'?s.routes:s.phase==='twist'||s.phase==='twistClosed'?s.second:s.first).length,view:v};
  r.inbox={};r.quotes={};r.sharedCards={};
  for(const [id,p]of Object.entries(s.players)){
   r.inbox[id]={game:s.id,round:s.round,player:p,first:s.first[id]||null,second:s.second[id]||null,route:s.routes[id]||'',card:s.phase==='ended'?E.card(s,id):null};
@@ -37,7 +38,7 @@ export function project(r){hydrate(r);const s=r.hostOnly,v=E.publicView(s);delet
  return JSON.parse(JSON.stringify(r));
 }
 export function remoteCommand(r,action,value,expected,now=Date.now()){
- if(!r)return;hydrate(r);const s=r.hostOnly;
+ if(!r||r.sessionActive===false)return;hydrate(r);const s=r.hostOnly;
  if(expected&&(s.id!==expected.id||s.round!==expected.round||s.phase!==expected.phase))return;
  for(const m of Object.values(r.moderation))delete m.removed;
  ingest(r);

@@ -15,6 +15,7 @@ export async function resolvePlayerMode(code,preferredMode,get){
 
 export async function initialEntryMode({role,search='',broadcast,get}){
  const broadcastMode=selectedMode(broadcast);
+ if(broadcast?.version===1)return broadcastMode;
  if(role==='display')return broadcastMode;
  const query=new URLSearchParams(search),explicit=query.get('mode');
  const preferred=validMode(explicit)?explicit:broadcastMode;
@@ -23,7 +24,7 @@ export async function initialEntryMode({role,search='',broadcast,get}){
 }
 
 export function playerInvitation(mode,room=''){
- const query=new URLSearchParams({mode:selectedMode({mode})});
+ const query=new URLSearchParams();
  if(room)query.set('room',room);
- return './index.html?'+query;
+ return './index.html'+(query.size?'?'+query:'');
 }
