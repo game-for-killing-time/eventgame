@@ -16,4 +16,9 @@ body.host .entry form button,body.voyage-host .host-login form button{width:100%
 @media(max-width:1400px){body.host .host-mode-switch,body.voyage-page .host-mode-switch{margin-inline:24px}}
 @media(max-width:850px){body.host header,body.voyage-page header{padding:12px 16px;gap:12px;flex-wrap:wrap}body.host header .brand-logo,body.voyage-page header .brand-logo{width:190px;height:90px}body.host header nav,body.voyage-page header nav{width:auto;order:initial;gap:14px}body.host .host-mode-switch,body.voyage-page .host-mode-switch{margin-inline:12px;padding:12px}body.host .entry,body.voyage-host .host-login{grid-template-columns:1fr;gap:20px;padding:24px}body.host .entry form,body.voyage-host .host-login form{padding:20px}}
 body.host .host-mode-switch,body.voyage-page .host-mode-switch{width:auto}
+/* The current mode remains an indicator even while switching is disabled. */
+body.host .host-mode-switch button[aria-current=page],body.voyage-page .host-mode-switch button[aria-current=page]{opacity:1;cursor:default;color:var(--party-ink);background:var(--party-green);border-color:#b4d5b9}
+body.host .question-picker .section-title,body.voyage-host .question-picker .section-title{display:flex;align-items:center;flex-wrap:wrap;gap:12px}
+body.host .question-picker #end,body.voyage-host .question-picker #end{margin-left:auto;background:#7d3038;color:#fff8e8;border:1px solid #efb4a7;min-height:46px;font-weight:bold}
+body.host .question-picker #end:hover:not(:disabled),body.voyage-host .question-picker #end:hover:not(:disabled){background:#963e47}
 
