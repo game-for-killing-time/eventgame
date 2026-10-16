@@ -2,6 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {legacyVoyage as voyage} from '../src/voyage-pack.js';
 import * as E from '../src/voyage-engine.js';
+test('Firebase sparse round results ignore empty slots and preserve misunderstood totals',()=>{
+ const results=[null,{target:'p0',choice:0,wrong:2},null,{target:'p0',choice:null,wrong:9},{target:'p1',choice:1,wrong:3}];
+ assert.equal(E.misunderstoodScore({results},'p0'),2);
+ assert.equal(E.misunderstoodScore({results},'p1'),3);
+ assert.equal(E.misunderstoodScore({results},'missing'),0);
+ assert.equal(E.misunderstoodScore({results:null},'p0'),0);
+});
 import {pairStats} from '../src/affinity.js';
 const setup=(n=4)=>{const s=E.create(0,'last-light-v2');for(let i=0;i<n;i++)E.join(s,`p${i}`,['小美','阿樂','琪琪','主持人'][i]||`玩家${i}`);return s;};
 test('target rotates, guesses score separately from own-choice affinity, E option works, movement only after reveal',()=>{const s=setup(3);start(s);assert.equal(s.target,'p0');E.submitFirst(s,'p0',1,0,null,110);E.submitFirst(s,'p1',1,0,1,110);E.submitFirst(s,'p2',1,1,0,110);const before=JSON.stringify(s.island);assert.equal(E.publicView(s).guessResult,null);E.close(s);assert.equal(JSON.stringify(s.island),before);E.revealFirst(s);assert.equal(s.players.p0.points,0);assert.equal(s.players.p1.points,0);assert.equal(s.players.p2.points,1);assert.deepEqual(pairStats(s.affinity.pairs,'p0','p1'),{shared:1,same:1});assert.deepEqual(pairStats(s.affinity.pairs,'p1','p2'),{shared:0,same:0});E.twist(s,120);E.close(s);E.revealSecond(s);start(s);assert.equal(s.target,'p1');const old=JSON.stringify(s.island);E.submitFirst(s,'p0',2,4,0,110);E.submitFirst(s,'p1',2,4,null,110);E.submitFirst(s,'p2',2,4,4,110);assert.equal(JSON.stringify(s.island),old);E.close(s);E.revealFirst(s);assert.deepEqual(pairStats(s.affinity.pairs,'p0','p1'),{shared:2,same:2});assert.equal(s.island.positions.p1.x-s.island.positions.p0.x,96);assert.equal(s.players.p0.points,0);assert.equal(s.players.p2.points,2);assert.equal(s.results[2].correct,1);assert.equal(s.results[2].wrong,1);const settled=JSON.stringify(s);E.revealFirst(s);assert.equal(JSON.stringify(s),settled);assert.equal('affinity' in E.publicView(s),false);});

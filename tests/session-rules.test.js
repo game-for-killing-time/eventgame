@@ -5,6 +5,7 @@ import {initializeTestEnvironment,assertFails} from '@firebase/rules-unit-testin
 import {ref,get,set,update,serverTimestamp} from 'firebase/database';
 import {sessionBackend} from '../src/session-backend.js';
 import {broadcastPath} from '../src/broadcast-model.js';
+import {createVoyage,remoteCommand} from '../src/voyage-remote-model.js';
 let env;
 const client=(uid,provider='anonymous')=>env.authenticatedContext(uid,{firebase:{sign_in_provider:provider}}).database();
 const host=()=>client('host','password');
@@ -12,6 +13,25 @@ const read=async(db,path)=>(await get(ref(db,path))).val();
 before(async()=>{env=await initializeTestEnvironment({projectId:'demo-hoho',database:{host:'127.0.0.1',port:9000,rules:readFileSync('database.rules.json','utf8')}});});
 after(async()=>env?.cleanup());
 beforeEach(async()=>{await env.clearDatabase();await env.withSecurityRulesDisabled(c=>set(ref(c.database()),{config:{hostUid:'host'}}));});
+
+test('login migrates a legacy room with Firebase sparse round results without losing players or progress',async()=>{
+ const db=host(),session=sessionBackend(db.app,undefined,db);
+ let voyage=createVoyage('OLD234',1000);
+ voyage.roster={p0:{name:'既有玩家',seat:'0',game:voyage.hostOnly.id,at:1000}};
+ voyage=remoteCommand(voyage,'sync');
+ voyage.hostOnly.results={1:{target:'p0',choice:0,wrong:2,rows:[]}};
+ await set(ref(db,'voyage'),voyage);
+ await set(ref(db,broadcastPath),{mode:'voyage'});
+ const stored=await read(db,'voyage/hostOnly/results');
+ assert.equal(Array.isArray(stored),true);assert.equal(JSON.parse(JSON.stringify(stored))[0],null);
+ await session.ensure('classic');
+ assert.equal((await read(db,broadcastPath)).code,'OLD234');
+ assert.equal((await read(db,'voyage/public/players/p0')).misunderstood,2);
+ await session.switch('classic');await session.switch('voyage');
+ assert.equal((await read(db,'voyage/roster/p0')).name,'既有玩家');
+ assert.deepEqual((await read(db,'voyage/hostOnly/results'))[1],stored[1]);
+ assert.equal((await read(db,broadcastPath)).lease,undefined);
+});
 
 test('real atomic switch preserves 20 player identities, owner-only inboxes and one room code under current deployed rules',async()=>{
  const db=host(),session=sessionBackend(db.app,undefined,db);await session.ensure('classic');await session.create('classic');

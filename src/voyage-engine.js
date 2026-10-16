@@ -54,4 +54,5 @@ export function autoAdvance(s,now=Date.now()){
  if(!expired&&(!ids.length||!ids.every(id=>answers[id])))return false;
  const first=s.phase==='first';close(s);if(first)revealFirst(s,now);else revealSecond(s,now);return true;
 }
-export function misunderstoodScore(s,id){return Object.values(s.results||{}).reduce((total,r)=>total+(r.target===id&&r.choice!==null?(r.wrong||0):0),0);}
+// Firebase may return numeric round keys as an array with null slots.
+export function misunderstoodScore(s,id){return Object.values(s.results||{}).reduce((total,r)=>total+(r&&r.target===id&&r.choice!==null?(r.wrong||0):0),0);}
