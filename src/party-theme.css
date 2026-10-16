@@ -1,0 +1,19 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
+/* Shared visual language for both island game modes. */
+:root{--party-ink:#fff8e8;--party-muted:#e8ddc8;--party-line:#fff8e82b;--party-surface:#00000082;--party-green:#216b54;--party-gold:#ffe3a0;--party-dark:#203e37;--party-font:'Noto Sans TC','Microsoft JhengHei',sans-serif;--party-background:url('../public/art/island-campfire-wide-1920.png')}
+body.host,body.voyage-page{font-family:var(--party-font);background:#77563a var(--party-background) center/cover fixed;color:var(--party-ink)}
+body.host header,body.voyage-page header{max-width:1400px;margin:auto;display:flex;align-items:center;justify-content:flex-start;gap:24px;padding:16px 24px;background:transparent;border:0}
+body.host header .brand-logo,body.voyage-page header .brand-logo{width:250px;height:120px;object-fit:contain;display:block}
+body.host header nav,body.voyage-page header nav{display:flex;align-items:center;flex-wrap:wrap;gap:20px;font-size:14px}
+body.host header a,body.voyage-page header a{color:var(--party-gold);font-weight:700}
+body.host .host-mode-switch,body.voyage-page .host-mode-switch{max-width:1352px;margin:8px auto 0;padding:12px 24px;background:var(--party-surface);border:1px solid var(--party-line);color:var(--party-ink);border-radius:16px;backdrop-filter:blur(12px)}
+body.host .host-mode-switch a,body.voyage-page .host-mode-switch a{background:#fff8e815;color:var(--party-ink);border:1px solid #fff8e840;border-radius:10px;box-shadow:none}
+body.host .host-mode-switch a[aria-current=page],body.voyage-page .host-mode-switch a[aria-current=page]{background:var(--party-green);border-color:#b4d5b961}
+body.host .entry,body.voyage-host .host-login{display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:40px;padding:28px 40px}
+body.host .entry h1,body.voyage-host .host-login h1{font-size:clamp(28px,3vw,40px);letter-spacing:0;line-height:1.4}
+body.host .entry form,body.voyage-host .host-login form{padding:28px;margin:0;background:#fff8e80c;border:1px solid var(--party-line);border-radius:12px;box-shadow:none}
+body.host .entry form button,body.voyage-host .host-login form button{width:100%;margin-top:16px}
+@media(max-width:1400px){body.host .host-mode-switch,body.voyage-page .host-mode-switch{margin-inline:24px}}
+@media(max-width:850px){body.host header,body.voyage-page header{padding:12px 16px;gap:12px;flex-wrap:wrap}body.host header .brand-logo,body.voyage-page header .brand-logo{width:190px;height:90px}body.host header nav,body.voyage-page header nav{width:auto;order:initial;gap:14px}body.host .host-mode-switch,body.voyage-page .host-mode-switch{margin-inline:12px;padding:12px}body.host .entry,body.voyage-host .host-login{grid-template-columns:1fr;gap:20px;padding:24px}body.host .entry form,body.voyage-host .host-login form{padding:20px}}
+body.host .host-mode-switch,body.voyage-page .host-mode-switch{width:auto}
+
