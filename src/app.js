@@ -20,12 +20,15 @@ import {leaderboardPanel} from './leaderboard-view.js';
 import {config} from '../config.js';
 import {pageLink} from './navigation.js';
 import {characterId,characterMarkup} from './characters.js';
+import {playerEntry,playerDetails} from './player-entry.js';
+import './player-entry.css';
 
 const role=document.body.dataset.role||'viewer', $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const labels={waiting:'等大家入座',thinking:'主角正在思考',open:'開放作答',closed:'已截止，等待揭曉',revealed:'答案揭曉・聊聊吧',ended:'今晚先到這裡'};
 let api,pub=null,privateRoom={},hostReady=false,choice=null,prediction=null,answerRound=null,ack='',sending=false,autoRevealing=false,autoRevealRetryAt=0;
 let ownAnswer=null,advancing=false,advanceRetryAt=0;
+let joining=false;
 let privateUnsub=()=>{},ownUnsub=()=>{},modUnsub=()=>{},moderation={},chatUnsubs=new Map(),chatData={},privateRound=null;
 const explicitDemo=new URLSearchParams(location.search).get('demo')==='1';
 const link=(page,room='')=>pageLink(page,{demo:explicitDemo,room:page==='index'&&!explicitDemo?'':room});
@@ -85,9 +88,10 @@ function entry(){
  }else{
  const joined=pub?.members?.[api.uid()]&&savedCode===pub?.state?.code;
  setEntryVideo(!joined);
+ document.body.classList.toggle('player-entry',!joined);
  $('entry').hidden=!!joined;
- if(!joined&&!$('joinForm'))$('entry').innerHTML=`<form id="joinForm" aria-labelledby="joinTitle"><h1 id="joinTitle" class="join-title">一起上島。</h1><p class="join-intro">輸入房間碼和暱稱，就能加入派對。</p><label for="roomCode">房間碼</label><input id="roomCode" maxlength="6" pattern="[A-Za-z0-9]{6}" value="${esc(savedCode)}" placeholder="輸入 6 位房間碼" autocomplete="off" autocapitalize="characters" spellcheck="false" required><label for="nickname">暱稱</label><input id="nickname" maxlength="20" value="${esc(localStorage.getItem(`${storagePrefix}-name`)||'')}" placeholder="大家怎樣稱呼你？" autocomplete="nickname" required><button class="primary">加入派對</button><p class="hint">毋須註冊，入座後會獲派一位島民。</p></form>`;
- if($('joinForm'))$('joinForm').onsubmit=e=>{e.preventDefault();act(async()=>{const code=$('roomCode').value.trim().toUpperCase(),name=$('nickname').value.trim();if(!name)throw Error('請輸入暱稱。');await api.join(code,name);notice('已加入房間。');savedCode=code;localStorage.setItem(`${storagePrefix}-room`,code);localStorage.setItem(`${storagePrefix}-name`,name);entry();render();watchOwn();syncChats();});};
+ if(!joined&&!$('joinForm'))$('entry').innerHTML=playerEntry({room:savedCode,name:localStorage.getItem(`${storagePrefix}-name`)||''});
+ if($('joinForm'))$('joinForm').onsubmit=e=>{e.preventDefault();if(joining)return;act(async()=>{const form=$('joinForm'),{code,name}=playerDetails(form),submit=form.querySelector('button');joining=true;submit.disabled=true;submit.textContent='正在加入…';form.setAttribute('aria-busy','true');try{await api.join(code,name);notice('已加入房間。');savedCode=code;localStorage.setItem(`${storagePrefix}-room`,code);localStorage.setItem(`${storagePrefix}-name`,name);entry();render();watchOwn();syncChats();}finally{joining=false;submit.disabled=false;submit.textContent='加入派對';form.setAttribute('aria-busy','false');}});};
  }
 }
 function eligible(){return role==='viewer'&&pub?.members?.[api.uid()]&&savedCode===pub?.state?.code&&!moderation.removed;}
