@@ -1,3 +1,4 @@
 const voyage=new URLSearchParams(location.search).get('mode')==='voyage';
-if(voyage){document.getElementById('app').id='story-app';await import('./voyage-app.js');}
+if(voyage&&new URLSearchParams(location.search).get('role')==='display')await import('./voyage-display.js');
+else if(voyage){document.getElementById('app').id='story-app';await import('./voyage-app.js');}
 else{await import('./style.css');await import('./host-desk.css');await import('./party-theme.css');await import('./app.js');}
