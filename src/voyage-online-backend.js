@@ -1,3 +1,4 @@
+import {startBroadcastControl} from './broadcast-control.js';
 import {config} from '../config.js';
 import {initializeApp} from 'firebase/app';
 import * as A from 'firebase/auth';
@@ -24,6 +25,7 @@ export async function voyageConnect(role,connection){
   watchChat(uid,fn,err){return D.onValue(D.query(ref(`voyage/chat/${uid}/messages`),D.orderByChild('at'),D.limitToLast(3)),s=>fn(s.val()),err);},
   async chat(text,pub){ready();const seq=(await get(`voyage/chat/${api.uid()}/seq`)||0)+1;await D.update(ref(`voyage/chat/${api.uid()}`),{seq,lastSent:D.serverTimestamp(),[`messages/${seq}`]:{text,at:D.serverTimestamp(),game:pub.id}});}
  };
+ if(role==='host')startBroadcastControl(app,'voyage');
  if(role==='player')await api.guest();return api;
 }
 

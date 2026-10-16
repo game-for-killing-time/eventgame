@@ -1,3 +1,5 @@
+import {createBroadcastRoom,cleanBroadcastRoom} from './broadcast-model.js';
+import {startBroadcastControl} from './broadcast-control.js';
 import {removeRoomMember,allowRemovedMembersToRejoin} from './member-removal.js';
 import {prepareQuestionPlan,startNextQuestion} from './question-plan.js';
 import {isSpotlight,configureSpotlight,awardMasters,targetFirst,activateGuesses,skipTarget} from './spotlight.js';
@@ -13,9 +15,9 @@ export async function connect(role,onConnection) {
  if(!config.firebase || new URLSearchParams(location.search).get('demo')==='1') return demo(role,onConnection);
  const [{initializeApp},a,d]=await Promise.all([import('firebase/app'),import('firebase/auth'),import('firebase/database')]);
  const testing=import.meta.env.DEV&&import.meta.env.VITE_STORY_EMULATOR==='1';
- const settings=testing?{apiKey:'demo-key',projectId:'demo-hoho',databaseURL:'https://demo-hoho.firebaseio.com'}:config.firebase;
+ const settings=testing?{apiKey:'demo-key',projectId:import.meta.env.VITE_TEST_PROJECT||'demo-hoho',databaseURL:'https://'+(import.meta.env.VITE_TEST_PROJECT||'demo-hoho')+'.firebaseio.com'}:config.firebase;
  const app=initializeApp(settings,role), auth=a.getAuth(app), db=d.getDatabase(app);
- if(config.emulators||testing){a.connectAuthEmulator(auth,'http://127.0.0.1:9099');d.connectDatabaseEmulator(db,'127.0.0.1',9000);}
+ if(config.emulators||testing){a.connectAuthEmulator(auth,'http://127.0.0.1:'+(import.meta.env.VITE_TEST_AUTH_PORT||9099));d.connectDatabaseEmulator(db,'127.0.0.1',Number(import.meta.env.VITE_TEST_DB_PORT||9000));}
  await a.setPersistence(auth,role==='display'?a.inMemoryPersistence:a.browserLocalPersistence); await auth.authStateReady();
  let online=false,offset=0;
  d.onValue(d.ref(db,'.info/connected'),s=>{online=s.val()===true;onConnection(online?'已連線':'離線／重新連線中');});
@@ -30,7 +32,7 @@ export async function connect(role,onConnection) {
  watch(path,fn,error){return d.onValue(ref(path),s=>fn(s.val()),error);},
  watchChat(uid,fn,error){return d.onValue(d.query(ref(`room/chat/${uid}/messages`),d.orderByChild('at'),d.limitToLast(3)),s=>fn(s.val()),error);},
  get,
- async create(){ready();const result=await d.runTransaction(ref('room'),room=>room?undefined:newRoom(makeCode()),{applyLocally:false});if(!result.committed) throw Error('已有房間；請結束並清理後再建立。');},
+ async create(){ready();const result=await d.runTransaction(ref('room'),room=>createBroadcastRoom(room,()=>newRoom(makeCode())),{applyLocally:false});if(!result.committed) throw Error('已有房間；請結束並清理後再建立。');},
  async join(code,name){ready();await api.guest();for(let attempt=0;attempt<20;attempt++){const p=await get('room/public');if(!p||p.state.code!==code)throw Error('房間碼不正確。');if(p.members?.[api.uid()])return;if(p.state.locked||p.state.status==='ended')throw Error('房間已鎖定或結束。');const seat=Array.from({length:20},(_,i)=>String(i)).find(i=>!p.seats?.[i]);if(seat===undefined)throw Error('房間已滿 20 人。');try{await d.update(ref('room/public'),{[`members/${api.uid()}`]:{name,code,seat,joined:d.serverTimestamp()},[`seats/${seat}`]:api.uid()});return;}catch(e){if((await get(`room/moderation/${api.uid()}`))?.removed||attempt===19)throw e;}}},
  async answer(round,choice,prediction,attempt,revision=0){ready();const answer={choice,prediction,revision,...(attempt!==undefined?{attempt}:{}),at:d.serverTimestamp()};await d.set(ref(`room/answers/${round}/${api.uid()}`),answer);return answer;},
  async consent(expected){ready();await d.set(ref(`room/public/earlyClose/votes/${api.uid()}`),{code:expected.code,round:expected.round,attempt:expected.attempt||0,at:d.serverTimestamp()});},
@@ -40,7 +42,7 @@ export async function connect(role,onConnection) {
  if(action==='prepareQuestions'||action==='startNext'){const result=await d.runTransaction(ref('room'),r=>{if(!r)return null;if(action==='startNext')return startNextQuestion(r,value,api.now());if(r.public.state.code!==value.expected?.code||r.public.state.round!==value.expected?.round)return;return prepareQuestionPlan(r,value);},{applyLocally:false});if(!result.committed)throw Error('房間或題目已變更，請確認目前進度。');return;}
  if(action==='relayEffects'){await d.runTransaction(ref('room'),r=>r?relayEffects(r,value,api.now()):null,{applyLocally:false});return;}
  if(action==='chatEffects'||action==='submitEffects'){await d.update(ref('room'),{[`public/state/${action}`]:value,[`effects/${action==='chatEffects'?'chat':'submissions'}`]:null});return;}
- if(action==='clean'){const r=await d.runTransaction(ref('room'),room=>!room||room.public.state.status==='ended'?null:undefined,{applyLocally:false});if(!r.committed) throw Error('請先結束房間。');return;}
+ if(action==='clean'){const r=await d.runTransaction(ref('room'),room=>cleanBroadcastRoom(room),{applyLocally:false});if(!r.committed) throw Error('請先結束房間。');return;}
  if(action==='migrate'){const expected=await get('room/public/state');if(!expected)return;await d.runTransaction(ref('room'),r=>!r?null:r.public.state.code===expected.code?allowRemovedMembersToRejoin(publishRevealedChoices(migrateAffinity(r))):undefined,{applyLocally:false});return;}
  if(action==='autoReveal'){await d.runTransaction(ref('room'),room=>autoRevealRound(room,value,api.now(),d.serverTimestamp()),{applyLocally:false});return;}
  if(action==='reveal'){const expected=value||await get('room/public/state');const r=await d.runTransaction(ref('room'),room=>!room?null:sameRound(room.public.state,expected)?settleRoom(room,expected.round,expected.code,d.serverTimestamp()):undefined,{applyLocally:false});if(!r.committed)throw Error('這輪狀態已改變，請重新確認。');return;}
@@ -56,6 +58,7 @@ export async function connect(role,onConnection) {
  if(action==='selectStory'){await d.set(ref('room/public/story'),value);return;}
  }
  };
+ if(role==='host')startBroadcastControl(app,'classic');
  if(role==='viewer') await api.guest();
  return api;
 }

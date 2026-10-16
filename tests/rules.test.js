@@ -1,3 +1,4 @@
+import {createBroadcastRoom,cleanBroadcastRoom} from '../src/broadcast-model.js';
 import test,{before,after,beforeEach} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -166,3 +167,7 @@ test('host removal allows same identity to rejoin, preserves answers, and keeps 
  await set(ref(h,'room/public/state/locked'),true);await assertFails(join(a,'returning'));
  await set(ref(h,'room/public/state/locked'),false);await assertSucceeds(join(a,'returning'));
 });
+
+test('only designated password host can select broadcast, even with no classic room',async()=>{await seed(d=>set(ref(d,'room'),null));const path='room/public/broadcast';for(const d of [db('visitor'),db('host'),db('other','password')])await assertFails(set(ref(d,path),{mode:'voyage',at:1}));await assertSucceeds(set(ref(host(),path),{mode:'voyage',at:serverTimestamp()}));assert.equal((await get(ref(env.unauthenticatedContext().database(),path))).val().mode,'voyage');await assertSucceeds(set(ref(host(),path),{mode:'classic',at:serverTimestamp()}));assert.equal((await get(ref(env.unauthenticatedContext().database(),path))).val().mode,'classic');});
+
+test('room lifecycle transactions preserve the shared broadcast selection',async()=>{const d=host();await update(ref(d,'room/public'),{broadcast:{mode:'voyage',at:1}});await runTransaction(ref(d,'room'),r=>cleanBroadcastRoom(r),{applyLocally:false});assert.equal((await get(ref(d,'room/public/state/code'))).val(),'PARTY1');await update(ref(d,'room/public/state'),{status:'ended'});await runTransaction(ref(d,'room'),r=>cleanBroadcastRoom(r),{applyLocally:false});assert.equal((await get(ref(d,'room/public/state'))).val(),null);assert.equal((await get(ref(d,'room/public/broadcast/mode'))).val(),'voyage');await runTransaction(ref(d,'room'),r=>createBroadcastRoom(r,()=>newRoom('NEW123')),{applyLocally:false});assert.equal((await get(ref(d,'room/public/state/code'))).val(),'NEW123');assert.equal((await get(ref(d,'room/public/broadcast/mode'))).val(),'voyage');});

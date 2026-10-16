@@ -15,7 +15,7 @@ document.body.classList.add('voyage-page');
 if(role==='host')document.body.classList.add('voyage-host');
 const KEY='hoho-voyage-local-v3';let rankKind='insight';let state,notice='',bad=false,key='',draft={choice:null,prediction:null,stance:'',second:null,text:'',consent:false},busy=false;
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const link=(r,id)=>r==='host'?`./host.html?mode=voyage${local?'&demo=1':''}`:`./story.html?${local?'demo=1&':''}role=${r}${local&&id?`&player=${encodeURIComponent(id)}`:!local&&state?`&room=${state.code}`:''}`;
+const link=(r,id)=>!local&&r!=='host'?`./${r==='display'?'display':'index'}.html`:r==='host'?`./host.html?mode=voyage${local?'&demo=1':''}`:`./story.html?${local?'demo=1&':''}role=${r}${local&&id?`&player=${encodeURIComponent(id)}`:!local&&state?`&room=${state.code}`:''}`;
 const btn=(id,text,disabled=false)=>`<button id="${id}" ${disabled||busy?'disabled':''}>${text}</button>`;
 const read=()=>{if(!local)return remote?.state||null;try{return JSON.parse(localStorage.getItem(KEY)||'null');}catch{return null;}};
 const fail=e=>{notice=/permission|PERMISSION/i.test(e.message||'')?'讀寫權限被拒絕，請確認房間及 Firebase 規則設定。':e.message||String(e);bad=true;render();};
