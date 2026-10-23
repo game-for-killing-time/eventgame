@@ -9,3 +9,15 @@
 .escape-page dialog{font-family:var(--party-font);background:#302c23;color:#fff8e8;border:1px solid #ffe3a080;border-radius:20px;padding:28px;width:min(480px,90vw);box-shadow:0 20px 80px #0008}.escape-page dialog::backdrop{background:#151e19bd}.escape-page dialog h2{color:#ffe3a0}.escape-page dialog button{background:#216b54;color:#fff8e8;border:1px solid #b9dfbb}
 .escape-page.voyage-display{font-family:var(--party-font)}.escape-page.voyage-display .voyage-story-text+.voyage-story-text{margin-top:14px}.escape-page.voyage-display .clock{margin-left:16px}.escape-page.voyage-display header .brand-logo{max-width:30vw}.escape-page.voyage-display .voyage-display-title{margin-left:auto}.escape-page.voyage-display .voyage-story-progress li{list-style:none}
 @media(max-width:650px){.escape-page .stage{grid-template-columns:1fr}.escape-page .personal,.escape-page .story,.escape-page .roster,.escape-page .history{padding:18px}.escape-page .stage-meta{font-size:12px}.escape-page .host-mascots img{width:48px;height:68px}.escape-page .host-room,.escape-page .question-picker{padding:20px}.escape-page .host-welcome{gap:10px}.escape-page .clock{font-size:11px}.escape-page .clock strong{font-size:20px}.escape-page .story-copy{font-size:16px}.escape-page .voyage-display-title{display:none}}
+/* Keep the host theme independent of Vite's shared CSS chunk load order. */
+body.escape-page.voyage-host main{max-width:1400px}
+body.escape-page.voyage-host .host-desk{background:var(--party-surface);color:var(--party-ink);border:1px solid var(--party-line);border-radius:20px;grid-template-columns:minmax(260px,.8fr) minmax(0,1.8fr)}
+body.escape-page.voyage-host .host-welcome,body.escape-page.voyage-host .host-room,body.escape-page.voyage-host .room-management{background:transparent;color:var(--party-ink);border-color:var(--party-line)}
+body.escape-page.voyage-host .host-welcome h1,body.escape-page.voyage-host .question-picker h2,body.escape-page.voyage-host .host-room h2{color:var(--party-ink)}
+body.escape-page.voyage-host .host-welcome{padding:20px 28px;border-bottom:1px solid var(--party-line)}
+body.escape-page.voyage-host .host-welcome h1{font-size:28px}
+body.escape-page.voyage-host button{background:#fff8e815;color:var(--party-ink);border:1px solid #fff8e840;border-radius:10px;box-shadow:none}
+body.escape-page.voyage-host button:hover:not(:disabled){background:#fff8e82b}
+body.escape-page.voyage-host button.primary,body.escape-page.voyage-host [data-command=create],body.escape-page.voyage-host #start button{background:var(--party-green);color:var(--party-ink);border-color:#b4d5b961}
+body.escape-page.voyage-host .voyage-island{max-width:1352px}
+@media(max-width:850px){body.escape-page.voyage-host .host-desk{grid-template-columns:1fr}body.escape-page.voyage-host .host-room{border-right:0;border-bottom:1px solid var(--party-line)}}
