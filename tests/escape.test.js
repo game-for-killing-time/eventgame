@@ -4,7 +4,7 @@ import {createEscape,command,tick,publicEscape,privateEscape,normalize} from '..
 import {publicPanel} from '../src/escape-view.js';
 const host={uid:'host',host:true},rng={pick:0,twists:Array(96).fill(2)};
 function cmd(s,uid,action,props={},now=1){return command(s,uid==='host'?host:{uid},{action,game:s.id,round:s.round,revision:s.revision,...props},now,rng);}
-function game(n=5){const s=createEscape('test','ABCDEF',0);for(let i=0;i<n;i++)cmd(s,'p'+i,'join',{name:['阿健','阿晴','阿樂','小美','阿明'][i]||'伙伴'+i,code:s.code});cmd(s,'host','start',{minutes:120});return s;}
+function game(n=5){const s=createEscape('test','ABCDEF',0);delete s.interactionVersion;for(let i=0;i<n;i++)cmd(s,'p'+i,'join',{name:['阿健','阿晴','阿樂','小美','阿明'][i]||'伙伴'+i,code:s.code});cmd(s,'host','start',{minutes:120});return s;}
 function phase(s){tick(s,s.deadline);}
 function round(s,answers={},kill=null){if(s.phase==='intro')phase(s);for(const id of Object.keys(s.players).filter(id=>s.players[id].alive)){const [route,choice]=answers[id]||[0,2];cmd(s,id,'answer',{route,choice},s.deadline-1);}phase(s);for(const id of Object.keys(s.players).filter(id=>s.players[id].alive)){const [route,choice]=answers[id]||[0,2];cmd(s,id,'answer',{route,choice,kill:id===s.wolf?kill:null},s.deadline-1);}phase(s);}
 function next(s){while(s.phase!=='intro'&&s.phase!=='ended')phase(s);}
